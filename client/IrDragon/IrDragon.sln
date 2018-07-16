@@ -1,0 +1,25 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio 15
+VisualStudioVersion = 15.0.27703.2018
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "IrDragon", "IrDragon\IrDragon.csproj", "{57816329-1566-4C31-BD9F-669CE4B5F5FD}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{57816329-1566-4C31-BD9F-669CE4B5F5FD}.Debug|Any CPU.ActiveCfg = Debug|x64
+		{57816329-1566-4C31-BD9F-669CE4B5F5FD}.Debug|Any CPU.Build.0 = Debug|x64
+		{57816329-1566-4C31-BD9F-669CE4B5F5FD}.Release|Any CPU.ActiveCfg = Release|x64
+		{57816329-1566-4C31-BD9F-669CE4B5F5FD}.Release|Any CPU.Build.0 = Release|x64
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {6EEE93F8-4E7A-4ABD-AD14-118396322330}
+	EndGlobalSection
+EndGlobal
