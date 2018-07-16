@@ -22,6 +22,7 @@ export default class Chat extends React.Component {
         this.historyLoading = false;
         // this.connectSSE();
         this.startMessagesGathering();
+        this.startPresenceGathering();
     }
 
     connectSSE() {
@@ -68,6 +69,26 @@ export default class Chat extends React.Component {
             .catch((e) => {
                 console.log(e);
             });
+    }
+
+    startPresenceGathering() {
+        const gatheringFunc = () => {
+            this.axios.get(`/api/chat/${this.chatId}/presence`)
+                .then(response => {
+                    console.info('Presence received:');
+                    for (const line in response.data) {
+                        if (response.data.hasOwnProperty(line))
+                        if (response.data[line] != null) {
+                            console.info(`${response.data[line].displayName}: ${new Date(response.data[line].activityDate * 1000)}`)
+                        }
+                    }
+                })
+                .catch(e => {
+                    console.log(e);
+                });
+        };
+        gatheringFunc();
+        setInterval(gatheringFunc, 10000);
     }
 
     handleInputKeyPress(event) {

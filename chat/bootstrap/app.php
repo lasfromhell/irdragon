@@ -68,6 +68,11 @@ $app->singleton(
     \App\Services\CacheServiceImpl::class
 );
 
+$app->singleton(
+    \App\Contracts\PresenceService::class,
+    \App\Services\PresenceServiceImpl::class
+);
+
 /*
 |--------------------------------------------------------------------------
 | Register Middleware

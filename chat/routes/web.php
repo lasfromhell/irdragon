@@ -29,6 +29,7 @@ $router->group(['prefix' => 'api'], function () use ($router) {
         $router->get('chat/{chatId}/latest/{number}', 'ChatController@getLatestMessages');
         $router->get('chat/{chatId}/after/{after}', 'ChatController@getMessagesAfter');
         $router->get('chat/{chatId}/before/{before}', 'ChatController@getMessagesBefore');
+        $router->get('chat/{chatId}/presence', 'ChatController@getPresence');
         $router->get('chat/events', 'ChatController@events');
     });
 });

@@ -1,6 +1,6 @@
 <?php
 
-namespace App;
+namespace App\DB;
 
 use Illuminate\Auth\Authenticatable;
 use Laravel\Lumen\Auth\Authorizable;
@@ -34,6 +34,6 @@ class User extends Model implements AuthenticatableContract, AuthorizableContrac
     protected $table = 'user';
 
     public function chats() {
-        return $this->hasMany('App\UserChatACL');
+        return $this->hasMany('App\DB\UserChatACL');
     }
 }

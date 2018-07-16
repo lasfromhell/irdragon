@@ -1,6 +1,6 @@
 <?php
 
-namespace App;
+namespace App\DB;
 
 use App\Contracts\UserService;
 use App\Http\Models\MessageData;

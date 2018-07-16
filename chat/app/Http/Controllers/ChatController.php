@@ -9,28 +9,27 @@
 namespace App\Http\Controllers;
 
 use App\Contracts\MessageService;
+use App\Contracts\PresenceService;
 use App\Contracts\SessionService;
 use App\Contracts\UserService;
-use App\Http\Models\NotificationData;
-use App\Message;
 use App\Services\ResponseUtils;
-use Carbon\Carbon;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\ValidationException;
-use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class ChatController extends Controller
 {
     protected $userService;
     protected $messageService;
     protected $sessionService;
+    protected $presenceService;
 
-    function __construct(UserService $userService, MessageService $messageService, SessionService $sessionService)
+    function __construct(UserService $userService, MessageService $messageService, SessionService $sessionService,
+                         PresenceService $presenceService)
     {
         $this->userService = $userService;
         $this->messageService = $messageService;
         $this->sessionService = $sessionService;
+        $this->presenceService = $presenceService;
     }
 
     public function sendMessage(int $chatId, Request $request) {
@@ -76,6 +75,14 @@ class ChatController extends Controller
             return ResponseUtils::buildAccessDenied();
         }
         return response()->json($this->messageService->getLastMessagesBeforeDB($chatId, $before));
+    }
+
+    public function getPresence(int $chatId) {
+        $userDates = array();
+        $this->userService->getChatUsers($chatId)->each(function($uc) use (&$userDates) {
+            $userDates[$uc->user_id] = $this->presenceService->getOnlineDate($uc->user_id);
+        });
+        return response()->json($userDates);
     }
 
     private function checkUserChat($chatId, $userData) {

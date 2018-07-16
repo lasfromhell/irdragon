@@ -11,7 +11,7 @@ namespace App\Services;
 use App\Contracts\MessageService;
 use App\Contracts\UserService;
 use App\Http\Models\MessageData;
-use App\Message;
+use App\DB\Message;
 use Illuminate\Support\Carbon;
 
 class MessageServiceImpl implements MessageService
@@ -127,6 +127,7 @@ class MessageServiceImpl implements MessageService
         $messageData->from = $this->userService->getUserById($message->from)->display_name;
         $messageData->date = $message->from_date;
         $messageData->id = $message->id;
+        $messageData->fromId = $message->from;
         return $messageData;
     }
 //

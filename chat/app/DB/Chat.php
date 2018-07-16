@@ -3,15 +3,15 @@
  * Created by PhpStorm.
  * User: lasfr
  * Date: 01.07.2018
- * Time: 23:19
+ * Time: 23:18
  */
 
-namespace App;
+namespace App\DB;
 
 
 use Illuminate\Database\Eloquent\Model;
 
-class UserChatACL extends Model
+class Chat extends Model
 {
     /**
      * The attributes that are mass assignable.
@@ -19,8 +19,8 @@ class UserChatACL extends Model
      * @var array
      */
     protected $fillable = [
-        'user_id', 'chat_id'
+        'name', 'moderator'
     ];
 
-    protected $table = 'user_chat_acl';
+    protected $table = 'user';
 }

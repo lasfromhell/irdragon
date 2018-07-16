@@ -49,6 +49,7 @@ class UserController extends Controller
         if (isset($user)) {
             $isOk = password_verify($data->password, $user->password);
         }
+        $this->userService->registerLoginAttempt($data->login, $isOk);
         if ($isOk) {
             try {
                 $token = $this->sessionService->generateToken();
@@ -68,7 +69,6 @@ class UserController extends Controller
         }
         else {
             return response("", 401);
-
         }
     }
 }

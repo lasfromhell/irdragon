@@ -2,6 +2,7 @@
 
 namespace App\Http\Middleware;
 
+use App\Contracts\PresenceService;
 use App\Contracts\SessionService;
 use App\Services\ResponseUtils;
 use Closure;
@@ -9,10 +10,12 @@ use Closure;
 class Authorize
 {
     protected $sessionService;
+    protected $presenceService;
 
-    public function __construct(SessionService $sessionService)
+    public function __construct(SessionService $sessionService, PresenceService $presenceService)
     {
         $this->sessionService = $sessionService;
+        $this->presenceService = $presenceService;
     }
 
     /**
@@ -31,6 +34,7 @@ class Authorize
         if (isset($token)) {
             $userData = $this->sessionService->fetchData($token);
             if (isset($userData)) {
+                $this->presenceService->updateOnlineDate($userData->id, $userData->displayName);
                 $this->sessionService->updateTTL($token);
                 $request->merge(['user' => $userData ]);
                 $request->setUserResolver(function () use ($userData) {

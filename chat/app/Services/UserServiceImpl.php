@@ -11,8 +11,9 @@ namespace App\Services;
 
 use App\Contracts\CacheService;
 use App\Contracts\UserService;
-use App\User;
-use App\UserChatACL;
+use App\DB\LoginAttempt;
+use App\DB\User;
+use App\DB\UserChatACL;
 use Illuminate\Support\Collection;
 
 class UserServiceImpl implements UserService
@@ -44,5 +45,15 @@ class UserServiceImpl implements UserService
 
     public function getUserChats($userId) : Collection {
         return UserChatACL::where('user_id', $userId)->get();
+    }
+
+    public function registerLoginAttempt($login, $success) {
+        $loginAttempt = new LoginAttempt();
+        $loginAttempt->fill(['login' => $login, 'success' => $success]);
+        $loginAttempt->saveOrFail();
+    }
+
+    public function getChatUsers($chatId) : Collection {
+        return UserChatACL::where('chat_id', $chatId)->get();
     }
 }

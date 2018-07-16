@@ -15,5 +15,6 @@ interface UserService
     public function getUserByLoginWithChats($login);
     public function getUserChats($userId) : Collection;
     public function getUserById($id);
-
+    public function registerLoginAttempt($login, $success);
+    public function getChatUsers($chatId) : Collection;
 }

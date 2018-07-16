@@ -12,6 +12,7 @@ namespace App\Http\Models;
 class MessageData
 {
     public $from;
+    public $fromId;
     public $message;
     public $date;
     public $id;
