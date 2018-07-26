@@ -31,5 +31,8 @@ $router->group(['prefix' => 'api'], function () use ($router) {
         $router->get('chat/{chatId}/before/{before}', 'ChatController@getMessagesBefore');
         $router->get('chat/{chatId}/presence', 'ChatController@getPresence');
         $router->get('chat/events', 'ChatController@events');
+        $router->post('chat/{chatId}/typingStarted', 'ChatController@typingStarted');
+        $router->post('chat/{chatId}/typingFinished', 'ChatController@typingFinished');
+        $router->post('chat/{chatId}/typingProgress', 'ChatController@typingProgress');
     });
 });

@@ -12,6 +12,7 @@ use App\Contracts\MessageService;
 use App\Contracts\PresenceService;
 use App\Contracts\SessionService;
 use App\Contracts\UserService;
+use App\Http\Models\SendMessageData;
 use App\Services\ResponseUtils;
 use Illuminate\Http\Request;
 use Illuminate\Validation\ValidationException;
@@ -46,11 +47,11 @@ class ChatController extends Controller
         }
         $data = $request::capture()->json()->get('data');
         try {
-            $this->messageService->addMessage($data, $userData->id, $chatId);
+            $messageId = $this->messageService->addMessage($data, $userData->id, $chatId);
         } catch (\Throwable $e) {
             return ResponseUtils::buildErrorResponse($e->getMessage(), 0, 404);
         }
-        return ResponseUtils::buildEmptyOkResponse();
+        return response()->json(new SendMessageData($messageId));
     }
 
     public function getLatestMessages(int $chatId, $number, Request $request) {
@@ -83,6 +84,21 @@ class ChatController extends Controller
             $userDates[$uc->user_id] = $this->presenceService->getOnlineDate($uc->user_id);
         });
         return response()->json($userDates);
+    }
+
+    public function typingStarted(int $chatId, Request $request) {
+        $userData = $request->user();
+        $this->messageService->typingStarted($userData->id, $chatId);
+    }
+
+    public function typingFinished(int $chatId, Request $request) {
+        $userData = $request->user();
+        $this->messageService->typingFinished($userData->id, $chatId);
+    }
+
+    public function typingProgress(int $chatId, Request $request) {
+        $userData = $request->user();
+        $this->messageService->typingProgress($userData->id, $chatId);
     }
 
     private function checkUserChat($chatId, $userData) {

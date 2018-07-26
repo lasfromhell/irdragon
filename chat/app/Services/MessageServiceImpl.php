@@ -8,39 +8,45 @@
 
 namespace App\Services;
 
+use App\Contracts\CacheService;
 use App\Contracts\MessageService;
 use App\Contracts\UserService;
+use App\Http\Models\MessageBlockData;
 use App\Http\Models\MessageData;
 use App\DB\Message;
+use App\Http\Models\TypingData;
 use Illuminate\Support\Carbon;
 
 class MessageServiceImpl implements MessageService
 {
     private $userService;
-//    private $cacheService;
+    private $cacheService;
+    const TYPING_PREFIX = 'user_typing_';
 //    protected $LATEST_TTL;
 
+    const TYPING_TTL = 5;
+
     public function __construct(
-        UserService $userService
-// ,CacheService $cacheService
+        UserService $userService, CacheService $cacheService
     ) {
         $this->userService = $userService;
-//        $this->cacheService = $cacheService;
+        $this->cacheService = $cacheService;
 //        $this->LATEST_TTL = new DateInterval("P10Y");
     }
 
     public function getLastMessagesAfterDB($chatId, $initId = -1, $limit = 100) {
-        return Message::where('chat_id', $chatId)->where('id', '>', $initId)->take($limit)->get()->map([$this, 'toMessageData'])->values()->toArray();
+        return $this->toMessageBlockData(Message::where('chat_id', $chatId)->where('id', '>', $initId)->take($limit)->get()->map([$this, 'toMessageData'])->values()->toArray(),
+            $chatId);
     }
 
     public function getLatestMessages($chatId, $messagesCount = 10) {
-        return Message::where('chat_id', $chatId)->orderBy('id', 'desc')->take($messagesCount)->get()->reverse()
-            ->map([$this, 'toMessageData'])->values()->toArray();
+        return $this->toMessageBlockData(Message::where('chat_id', $chatId)->orderBy('id', 'desc')->take($messagesCount)->get()->reverse()
+            ->map([$this, 'toMessageData'])->values()->toArray(), $chatId);
     }
 
     public function getLastMessagesBeforeDB($chatId, $initId, $limit = 10) {
-        return Message::where('chat_id', $chatId)->where('id', '<', $initId)->orderBy('id', 'desc')->take($limit)->get()->reverse()
-            ->map([$this, 'toMessageData'])->values()->toArray();
+        return $this->toMessageBlockData(Message::where('chat_id', $chatId)->where('id', '<', $initId)->orderBy('id', 'desc')->take($limit)->get()->reverse()
+            ->map([$this, 'toMessageData'])->values()->toArray(), $chatId);
     }
 
     public function addMessage($data, $userId, $chatId) {
@@ -48,6 +54,7 @@ class MessageServiceImpl implements MessageService
         $message->fill(['data' => $data, 'from' => $userId, 'from_date' => Carbon::now(),
             'read' => false, 'chat_id' => $chatId, 'fake' => false, 'private' => true]);
         $message->saveOrFail();
+        return $message->id;
     }
 
 //    public function getLatestMessages($chatId, $messagesCount)
@@ -125,7 +132,7 @@ class MessageServiceImpl implements MessageService
         $messageData = new MessageData();
         $messageData->message = $message->data;
         $messageData->from = $this->userService->getUserById($message->from)->display_name;
-        $messageData->date = $message->from_date;
+        $messageData->date = $message->from_date->timestamp;
         $messageData->id = $message->id;
         $messageData->fromId = $message->from;
         return $messageData;
@@ -134,4 +141,31 @@ class MessageServiceImpl implements MessageService
 //    private function addMessageDataWithIID($chatId, $iid, $messageData) {
 //        $this->cacheService->set('message_' . $chatId . '_' . $iid, $messageData, $this->LATEST_TTL);
 //    }
+
+
+    public function typingStarted($userId, $chatId) {
+        $typingData = new TypingData();
+        $typingData->displayName = $this->userService->getUserById($userId)->display_name;
+        $typingData->userId = $userId;
+        $this->cacheService->set($this->constructTypingKey($chatId), $typingData, self::TYPING_TTL);
+    }
+
+    public function typingFinished($userId, $chatId) {
+        $this->cacheService->delete($this->constructTypingKey($chatId));
+    }
+
+    public function toMessageBlockData($messages, $chatId) {
+        $messageBlockData = new MessageBlockData();
+        $messageBlockData->messages = $messages;
+        $messageBlockData->typing = $this->cacheService->get($this->constructTypingKey($chatId));
+        return $messageBlockData;
+    }
+
+    private function constructTypingKey($chatId) {
+        return self::TYPING_PREFIX . $chatId;
+    }
+
+    public function typingProgress($userId, $chatId) {
+        $this->cacheService->touch($this->constructTypingKey($chatId), self::TYPING_TTL);
+    }
 }

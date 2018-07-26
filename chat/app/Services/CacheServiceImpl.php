@@ -68,4 +68,8 @@ class CacheServiceImpl implements CacheService
     {
         $this->cache->getItem($key)->isEmpty();
     }
+
+    public function delete($key) {
+        $this->cache->deleteItem($key);
+    }
 }

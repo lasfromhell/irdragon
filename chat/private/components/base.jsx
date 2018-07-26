@@ -13,6 +13,10 @@ export default class Base extends React.Component {
 
     }
 
+    updateTitle(newTitle) {
+        document.title = newTitle;
+    }
+
     authenticated(userData) {
         this.setState({
             isLoggedIn: true,
@@ -23,7 +27,7 @@ export default class Base extends React.Component {
     render() {
         return (
             this.state.isLoggedIn ?
-                <Chat userData={this.state.userData}/> : <Login authenticatedCB={this.authenticated}/>
+                <Chat userData={this.state.userData} updateTitleCB={this.updateTitle}/> : <Login authenticatedCB={this.authenticated}/>
             );
     }
 };

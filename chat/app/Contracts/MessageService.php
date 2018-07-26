@@ -18,4 +18,8 @@ interface MessageService
 //    public function getMessage($chatId, $iid);
     public function addMessage($data, $userId, $chatId);
     public function getLastMessagesBeforeDB($chatId, $initId, $limit = 10);
-    }
+
+    public function typingStarted($userId, $chatId);
+    public function typingFinished($userId, $chatId);
+    public function typingProgress($userId, $chatId);
+}

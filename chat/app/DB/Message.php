@@ -12,4 +12,5 @@ class Message extends Model {
     ];
 
     protected $table = 'message';
+    protected $dates = ['created_at', 'updated_at', 'from_date'];
 }

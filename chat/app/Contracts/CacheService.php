@@ -18,4 +18,5 @@ interface CacheService
     public function mutex($key);
     public function touch($key, $ttl);
     public function exists($key);
+    public function delete($key);
 }

@@ -60,15 +60,15 @@ export default class Login extends React.Component {
     }
 
     render() {
-        return <div className="authentication-container">
+        return <form><div className="authentication-container">
             <div className="authentication-box">
                 <div className="row">
                     <label htmlFor="login">Login:</label>
-                    <input className="form-submit-text" id="login" type="text" value={this.state.login} onChange={this.handleInputChange} onKeyPress={this.handleInputKeyPress}/>
+                    <input className="form-submit-text" id="login" type="text" value={this.state.login} onChange={this.handleInputChange} onKeyPress={this.handleInputKeyPress} autoComplete="username"/>
                 </div>
                 <div className="row">
                     <label htmlFor="password">Password:</label>
-                    <input className="form-submit-text" id="password" type="password" value={this.state.password} onChange={this.handleInputChange} onKeyPress={this.handleInputKeyPress}/>
+                    <input className="form-submit-text" id="password" type="password" value={this.state.password} onChange={this.handleInputChange} onKeyPress={this.handleInputKeyPress} autoComplete="current-password"/>
                 </div>
                 <div className="row text-error">
                     {this.state.error}
@@ -77,7 +77,7 @@ export default class Login extends React.Component {
                     <input className="form-submit-btn" type="button" id="authenticateBtn" value="Sign in" onClick={this.authenticate} disabled={this.state.authenticating}/>
                 </div>
             </div>
-        </div>;
+        </div></form>;
     }
 }
 
