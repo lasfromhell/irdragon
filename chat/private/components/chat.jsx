@@ -211,7 +211,7 @@ export default class Chat extends React.Component {
     }
 
     sendMessageData(data, iid) {
-        axios.post(`/api/chat/${this.props.userData.chats[0]}/message`, {
+        this.axios.post(`/api/chat/${this.props.userData.chats[0]}/message`, {
             data: data,
             token: this.props.userData.token
         }).then((response) => {
@@ -246,7 +246,6 @@ export default class Chat extends React.Component {
 
     componentDidMount() {
         Chat.scrollToBottom(this.refs.chatMessagesBox);
-        this.refs.chatBox.addEventListener('resize', this.onChatResize.bind(this));
     }
 
     componentDidUpdate() {
@@ -310,14 +309,6 @@ export default class Chat extends React.Component {
 
     updateTitle() {
         this.props.updateTitleCB(`[${this.newMessagesCount}] IR Dragon`);
-    }
-
-    onChatResize(e) {
-        localStorage.setItem('chatSize',
-            JSON.stringify({
-                height: this.refs.chatBox.offsetHeight,
-                width: this.refs.chatBox.offsetWidth
-            }));
     }
 
     loadChatSize() {

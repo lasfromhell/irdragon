@@ -31,6 +31,7 @@ class Authorize
         $token = $request->header('Authentication-Token');
         $token = $token ?? $request->json('token');
         $token = $token ?? $request->input('token');
+        $token = $token ?? $request->cookie('token');
         if (isset($token)) {
             $userData = $this->sessionService->fetchData($token);
             if (isset($userData)) {

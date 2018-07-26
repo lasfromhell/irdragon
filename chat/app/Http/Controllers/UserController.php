@@ -13,7 +13,9 @@ use App\Contracts\UserService;
 use App\Http\Models\UserData;
 use App\Services\ResponseUtils;
 use Illuminate\Http\Request;
+use Illuminate\Http\Response;
 use Illuminate\Validation\ValidationException;
+use Symfony\Component\HttpFoundation\Cookie;
 
 class UserController extends Controller
 {
@@ -65,10 +67,19 @@ class UserController extends Controller
                 return $userChat->chat_id;
             })->toArray();
             $this->sessionService->storeData($token, $userData);
-            return response()->json($userData);
+            $response = new Response();
+            if ($data->rememberCookie) {
+//                $response->withCookie(new Cookie('token', $token, 300));
+                $response->withCookie(new Cookie('token', $token, time() + (3600 * 8), '/',  null, false, false));
+            }
+            return $response->setContent(json_encode($userData));
         }
         else {
-            return response("", 401);
+            return response("Wrong login or password", 401);
         }
+    }
+
+    public function authorizeRequest(Request $request) {
+        return response()->json($request->user(), 200);
     }
 }

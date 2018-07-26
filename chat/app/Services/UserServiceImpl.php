@@ -26,7 +26,6 @@ class UserServiceImpl implements UserService
         $this->cacheService = $cacheService;
     }
 
-
     public function getUserById($id) {
         $user = $this->cacheService->get(self::USER_PREFIX . $id);
         if (isset($user)) {

@@ -17,7 +17,7 @@ class SessionServiceImpl implements SessionService
     const TOKEN = 'token_';
     protected $cacheService;
 
-    const TTL = 300;
+    const TTL = 900;
 
     public function __construct(CacheService $cacheService)
     {

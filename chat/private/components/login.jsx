@@ -9,6 +9,7 @@ export default class Login extends React.Component {
             password: '',
             authenticating: false,
             error: '',
+            rememberCookie: false
         };
         this.unmounted = false;
         this.authenticate = this.authenticate.bind(this);
@@ -26,7 +27,8 @@ export default class Login extends React.Component {
         });
         axios.post('/api/user/authenticate', {
             login: this.state.login,
-            password: this.state.password
+            password: this.state.password,
+            rememberCookie: this.state.rememberCookie
         }).then((response) => {
             this.authenticatedCB(response.data);
         }).catch((error) => {
@@ -44,8 +46,15 @@ export default class Login extends React.Component {
 
     handleInputChange(event) {
         const target = event.target;
+        let value;
+        if (target.type === "checkbox") {
+            value = target.checked;
+        }
+        else {
+            value = target.value;
+        }
         this.setState({
-            [target.id]: target.value
+            [target.id]: value
         });
     }
 
@@ -69,6 +78,10 @@ export default class Login extends React.Component {
                 <div className="row">
                     <label htmlFor="password">Password:</label>
                     <input className="form-submit-text" id="password" type="password" value={this.state.password} onChange={this.handleInputChange} onKeyPress={this.handleInputKeyPress} autoComplete="current-password"/>
+                </div>
+                <div className="row">
+                    <input className="form-submit-checkbox" id="rememberCookie" type="checkbox" checked={this.state.rememberCookie} onChange={this.handleInputChange}/>
+                    <label htmlFor="rememberCookie">Remember single session to cookies</label>
                 </div>
                 <div className="row text-error">
                     {this.state.error}
