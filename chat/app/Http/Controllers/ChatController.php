@@ -67,7 +67,11 @@ class ChatController extends Controller
         if (!$this->checkUserChat($chatId, $userData)) {
             return ResponseUtils::buildAccessDenied();
         }
-        return response()->json($this->messageService->getLastMessagesAfterDB($chatId, $after));
+        $limit = $request::capture()->json()->get('$limit');
+        if (!isset($limit)) {
+            $limit = 1000;
+        }
+        return response()->json($this->messageService->getLastMessagesAfterDB($chatId, $after, $limit));
     }
 
     public function getMessagesBefore(int $chatId, $before, Request $request) {
@@ -75,7 +79,11 @@ class ChatController extends Controller
         if (!$this->checkUserChat($chatId, $userData)) {
             return ResponseUtils::buildAccessDenied();
         }
-        return response()->json($this->messageService->getLastMessagesBeforeDB($chatId, $before));
+        $limit = $request::capture()->json()->get('$limit');
+        if (!isset($limit)) {
+            $limit = 20;
+        }
+        return response()->json($this->messageService->getLastMessagesBeforeDB($chatId, $before, $limit));
     }
 
     public function getPresence(int $chatId) {

@@ -17,7 +17,7 @@ class SessionServiceImpl implements SessionService
     const TOKEN = 'token_';
     protected $cacheService;
 
-    const TTL = 900;
+    const TTL = 7200;
 
     public function __construct(CacheService $cacheService)
     {
@@ -46,5 +46,10 @@ class SessionServiceImpl implements SessionService
             $token = bin2hex(random_bytes(128));
         } while ($this->cacheService->exists($token));
         return $token;
+    }
+
+    public function removeToken($token)
+    {
+        $this->cacheService->delete($this->combineSessionKey($token));
     }
 }

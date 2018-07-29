@@ -9,7 +9,7 @@ export default class Login extends React.Component {
             password: '',
             authenticating: false,
             error: '',
-            rememberCookie: false
+            rememberCookie: true
         };
         this.unmounted = false;
         this.authenticate = this.authenticate.bind(this);
@@ -81,7 +81,7 @@ export default class Login extends React.Component {
                 </div>
                 <div className="row">
                     <input className="form-submit-checkbox" id="rememberCookie" type="checkbox" checked={this.state.rememberCookie} onChange={this.handleInputChange}/>
-                    <label htmlFor="rememberCookie">Remember single session to cookies</label>
+                    <label htmlFor="rememberCookie">Remember for 2h when closed</label>
                 </div>
                 <div className="row text-error">
                     {this.state.error}

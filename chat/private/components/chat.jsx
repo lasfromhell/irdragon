@@ -2,6 +2,7 @@ import React from 'react';
 import ChatMessage from "./chat_message";
 import axios from 'axios';
 import SortedMap from 'collections/sorted-map'
+import ChatMenu from "./chat_menu";
 const uuidv1 = require('uuid/v1');
 
 const TYPING_OFFSET_MS = 1000;
@@ -31,6 +32,11 @@ export default class Chat extends React.Component {
         this.lastTypingProgressDate = null;
         this.typingTimer = null;
 
+        this.messageGatheringStopped = false;
+        this.messsageGatheringTimeout = null;
+        this.presenceGatheringStopped = false;
+        this.presenceGatheringInterval = null;
+
         this.loadChatSize();
 
         this.resetNewMessagesCount();
@@ -44,7 +50,7 @@ export default class Chat extends React.Component {
         this.axios.get(`/api/chat/${this.chatId}/latest/20`)
             .then(response => {
                 if (response.status !== 200) {
-                    setTimeout(this.startMessagesGathering.bind(this), 1000);
+                    this.messsageGatheringTimeout = setTimeout(this.startMessagesGathering.bind(this), 1000);
                 }
                 this.updateTyping(response.data.typing);
                 if (!response.data.messages || response.data.messages.length === 0) {
@@ -55,7 +61,7 @@ export default class Chat extends React.Component {
                     this.firstId = response.data.messages[response.data.messages.length-1].id;//this.state.messages.min().id;
                 }
                 this.loadPreviousMessages();
-                setTimeout(this.sendRequestOnLatestMessages.bind(this), 1000)
+                this.messsageGatheringTimeout = setTimeout(this.sendRequestOnLatestMessages.bind(this), 1000)
             })
             .catch((e) => {
                 console.log(e);
@@ -63,6 +69,10 @@ export default class Chat extends React.Component {
     }
 
     sendRequestOnLatestMessages() {
+        if (this.messageGatheringStopped) {
+            clearTimeout(this.messsageGatheringTimeout);
+            return;
+        }
         const requestInitTime = new Date().getTime();
         this.axios.get(`/api/chat/${this.chatId}/after/${this.latestId}`)
             .then(response => {
@@ -76,7 +86,7 @@ export default class Chat extends React.Component {
                 console.error('Unable to get latest messages', error);
             })
             .then(() => {
-                setTimeout(this.sendRequestOnLatestMessages.bind(this), Math.max(0, 1000 - (new Date().getTime() - requestInitTime)));
+                this.messsageGatheringTimeout = setTimeout(this.sendRequestOnLatestMessages.bind(this), Math.max(0, 1000 - (new Date().getTime() - requestInitTime)));
             });
     }
 
@@ -114,6 +124,10 @@ export default class Chat extends React.Component {
 
     startPresenceGathering() {
         const gatheringFunc = () => {
+            if (this.presenceGatheringStopped) {
+                clearInterval(this.presenceGatheringInterval);
+                return;
+            }
             this.axios.get(`/api/chat/${this.chatId}/presence`)
                 .then(response => {
                     console.info('Presence received:');
@@ -129,7 +143,7 @@ export default class Chat extends React.Component {
                 });
         };
         gatheringFunc();
-        setInterval(gatheringFunc, 10000);
+        this.presenceGatheringInterval = setInterval(gatheringFunc, 10000);
     }
 
     handleInputKeyPress(event) {
@@ -271,7 +285,7 @@ export default class Chat extends React.Component {
     }
 
     loadPreviousMessages() {
-        if (this.refs.chatMessagesBox.scrollTop / this.refs.chatMessagesBox.scrollHeight < 0.4 && !this.fullHistoryLoaded
+        if (this.refs.chatMessagesBox.scrollTop / this.refs.chatMessagesBox.scrollHeight < 0.1 && !this.fullHistoryLoaded
                 && !this.historyLoading) {
             this.historyLoading = true;
             this.axios.get(`/api/chat/${this.chatId}/before/${this.firstId}`)
@@ -329,8 +343,25 @@ export default class Chat extends React.Component {
         }
     }
 
+    stopProcessing() {
+        if (this.messsageGatheringTimeout) {
+            clearTimeout(this.messsageGatheringTimeout);
+        }
+        this.messageGatheringStopped = true;
+        if (this.presenceGatheringInterval) {
+            clearInterval(this.presenceGatheringInterval);
+        }
+        this.presenceGatheringStopped = true;
+    }
+
+    onLogout () {
+        this.stopProcessing();
+        this.props.onLogout()
+    }
+
     render() {
         return <div className="chat-box" ref="chatBox">
+            <ChatMenu onLogout={this.onLogout.bind(this)} axios={this.axios}/>
             <div className="chat-messages-box" ref="chatMessagesBox" onScroll={this.handleMessageBoxScroll.bind(this)} onWheel={this.handleWheel.bind(this)}>
                 {this.state.messages.map((value, key) => <ChatMessage id={'cm_' + key} key={key} message={value} userData={this.props.userData}/>)}
                 {this.state.proposedMessages.map((value, key) => <ChatMessage id={'propcm_' + key} key={key} message={value} userData={this.props.userData}/>)}

@@ -26,6 +26,7 @@ $router->group(['prefix' => 'api'], function () use ($router) {
     $router->group(['middleware' => 'auth'], function () use ($router) {
         $router->post('user/encodePassword', 'UserController@encodePassword');
         $router->post('user/authorize', 'UserController@authorizeRequest');
+        $router->post('user/logout', 'UserController@logout');
         $router->post('chat/{chatId}/message', 'ChatController@sendMessage');
         $router->get('chat/{chatId}/latest/{number}', 'ChatController@getLatestMessages');
         $router->get('chat/{chatId}/after/{after}', 'ChatController@getMessagesAfter');

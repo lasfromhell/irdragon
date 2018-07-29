@@ -82,4 +82,9 @@ class UserController extends Controller
     public function authorizeRequest(Request $request) {
         return response()->json($request->user(), 200);
     }
+
+    public function logout(Request $request) {
+        $this->sessionService->removeToken($request->user()->token);
+        return ResponseUtils::buildEmptyOkResponse();
+    }
 }

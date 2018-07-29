@@ -15,4 +15,5 @@ interface SessionService
     public function fetchData($token);
     public function updateTTL($token);
     public function generateToken(): string;
+    public function removeToken($token);
 }

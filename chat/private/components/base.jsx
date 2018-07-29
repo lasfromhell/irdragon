@@ -30,7 +30,7 @@ export default class Base extends React.Component {
         })
     }
 
-    updateTitle(newTitle) {
+    static updateTitle(newTitle) {
         document.title = newTitle;
     }
 
@@ -40,12 +40,18 @@ export default class Base extends React.Component {
             userData: userData
         });
     }
+    
+    onLogout() {
+        this.setState({
+            isLoggedIn: false
+        });
+    }
 
     render() {
         return (
             this.state.isChecked ? (
             this.state.isLoggedIn ?
-                <Chat userData={this.state.userData} updateTitleCB={this.updateTitle}/> : <Login authenticatedCB={this.authenticated}/>
+                <Chat userData={this.state.userData} updateTitleCB={Base.updateTitle} onLogout={this.onLogout.bind(this)}/> : <Login authenticatedCB={this.authenticated}/>
             ) : <div/> );
     }
 };
