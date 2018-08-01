@@ -1,7 +1,7 @@
 import React from 'react';
 import Login from './login';
 import Chat from './chat';
-import axios from 'axios';
+import ChatProxy from './services/chat_proxy'
 
 export default class Base extends React.Component {
     constructor(props) {
@@ -12,13 +12,15 @@ export default class Base extends React.Component {
         };
 
         this.authenticated = this.authenticated.bind(this);
+        this.chatProxy = new ChatProxy();
         this.checkAuthentication();
     }
 
     checkAuthentication() {
-        axios.post("/api/user/authorize")
+        this.chatProxy.authorize()
             .then(response => {
                 if (response.status === 200) {
+                    this.chatProxy.setToken(response.data.token);
                     this.setState({
                         isLoggedIn: true,
                         userData: response.data,
@@ -42,6 +44,7 @@ export default class Base extends React.Component {
     }
     
     onLogout() {
+        this.chatProxy.setGoToHomeCallback(null);
         this.setState({
             isLoggedIn: false
         });
@@ -51,7 +54,8 @@ export default class Base extends React.Component {
         return (
             this.state.isChecked ? (
             this.state.isLoggedIn ?
-                <Chat userData={this.state.userData} updateTitleCB={Base.updateTitle} onLogout={this.onLogout.bind(this)}/> : <Login authenticatedCB={this.authenticated}/>
+                <Chat userData={this.state.userData} updateTitleCB={Base.updateTitle} onLogout={this.onLogout.bind(this)} chatProxy={this.chatProxy}/>
+                : <Login authenticatedCB={this.authenticated} chatProxy={this.chatProxy}/>
             ) : <div/> );
     }
 };

@@ -25,23 +25,20 @@ export default class Login extends React.Component {
         this.setState({
             authenticating: true
         });
-        axios.post('/api/user/authenticate', {
-            login: this.state.login,
-            password: this.state.password,
-            rememberCookie: this.state.rememberCookie
-        }).then((response) => {
-            this.authenticatedCB(response.data);
-        }).catch((error) => {
-            this.setState({
-                error: error.message + ' : ' + error.response.statusText
-            });
-        }).finally(() => {
-            if (this.unmounted === false) {
+        this.props.chatProxy.authenticate(this.state.login, this.state.password, this.state.rememberCookie)
+            .then((response) => {
+                this.authenticatedCB(response.data);
+            }).catch((error) => {
                 this.setState({
-                    authenticating: false
+                    error: error.message + ' : ' + error.response.statusText
                 });
-            }
-        });
+            }).finally(() => {
+                if (this.unmounted === false) {
+                    this.setState({
+                        authenticating: false
+                    });
+                }
+            });
     }
 
     handleInputChange(event) {
@@ -81,7 +78,7 @@ export default class Login extends React.Component {
                 </div>
                 <div className="row">
                     <input className="form-submit-checkbox" id="rememberCookie" type="checkbox" checked={this.state.rememberCookie} onChange={this.handleInputChange}/>
-                    <label htmlFor="rememberCookie">Remember for 2h when closed</label>
+                    <label htmlFor="rememberCookie">Remember for 1h when closed</label>
                 </div>
                 <div className="row text-error">
                     {this.state.error}

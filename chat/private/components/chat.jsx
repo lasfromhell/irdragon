@@ -1,6 +1,5 @@
 import React from 'react';
 import ChatMessage from "./chat_message";
-import axios from 'axios';
 import SortedMap from 'collections/sorted-map'
 import ChatMenu from "./chat_menu";
 const uuidv1 = require('uuid/v1');
@@ -18,11 +17,7 @@ export default class Chat extends React.Component {
             data: ''
         };
         this.chatId = this.props.userData.chats[0];
-        this.axios = axios.create({
-            headers: {
-                'Authentication-Token': this.props.userData.token
-            }
-        });
+
         this.latestId = -1;
         this.firstId = 0;
         this.fullHistoryLoaded = false;
@@ -36,6 +31,8 @@ export default class Chat extends React.Component {
         this.messsageGatheringTimeout = null;
         this.presenceGatheringStopped = false;
         this.presenceGatheringInterval = null;
+        this.chatProxy = props.chatProxy;
+        this.chatProxy.setGoToHomeCallback(this.onLogout.bind(this));
 
         this.loadChatSize();
 
@@ -47,8 +44,7 @@ export default class Chat extends React.Component {
     }
 
     startMessagesGathering() {
-        this.axios.get(`/api/chat/${this.chatId}/latest/20`)
-            .then(response => {
+            this.chatProxy.getLatestMessages(this.chatId).then(response => {
                 if (response.status !== 200) {
                     this.messsageGatheringTimeout = setTimeout(this.startMessagesGathering.bind(this), 1000);
                 }
@@ -74,7 +70,7 @@ export default class Chat extends React.Component {
             return;
         }
         const requestInitTime = new Date().getTime();
-        this.axios.get(`/api/chat/${this.chatId}/after/${this.latestId}`)
+        this.chatProxy.getMessagesAfter(this.chatId, this.latestId)
             .then(response => {
                 this.updateTyping(response.data.typing);
                 if (!response.data.messages || response.data.messages.length === 0) {
@@ -91,7 +87,6 @@ export default class Chat extends React.Component {
     }
 
     updateStateByNewMessages(messages, modifyLatestId = true, proposed = false) {
-        // this.setState({messages: [...this.state.messages, ...data]});
         if (proposed) {
             this.setStateProposedMessages(messages);
         }
@@ -128,8 +123,7 @@ export default class Chat extends React.Component {
                 clearInterval(this.presenceGatheringInterval);
                 return;
             }
-            this.axios.get(`/api/chat/${this.chatId}/presence`)
-                .then(response => {
+            this.chatProxy.getPresence(this.chatId).then(response => {
                     console.info('Presence received:');
                     for (const line in response.data) {
                         if (response.data.hasOwnProperty(line))
@@ -181,7 +175,7 @@ export default class Chat extends React.Component {
     }
 
     sendTypingStarted() {
-        this.axios.post(`/api/chat/${this.chatId}/typingStarted`);
+        this.chatProxy.sendTypingStarted(this.chatId);
         this.lastTypingProgressDate = new Date().getTime();
     }
 
@@ -189,7 +183,7 @@ export default class Chat extends React.Component {
         this.dropTypingTimer();
         this.typingTimer = setTimeout(this.sendTypingFinished.bind(this), TYPING_OFFSET_MS);
         if (this.lastTypingProgressDate + TYPING_REFRESH_SEND_OFFSET_MS < new Date().getTime()) {
-            this.axios.post(`/api/chat/${this.chatId}/typingProgress`);
+            this.chatProxy.sendTypingProgress(this.chatId);
             this.lastTypingProgressDate = new Date().getTime();
         }
     }
@@ -201,7 +195,7 @@ export default class Chat extends React.Component {
     }
 
     sendTypingFinished() {
-        this.axios.post(`/api/chat/${this.chatId}/typingFinished`);
+        this.chatProxy.sendTypingFinished(this.chatId);
         this.typingTimer = null;
         this.lastTypingProgressDate = null;
     }
@@ -225,10 +219,7 @@ export default class Chat extends React.Component {
     }
 
     sendMessageData(data, iid) {
-        this.axios.post(`/api/chat/${this.props.userData.chats[0]}/message`, {
-            data: data,
-            token: this.props.userData.token
-        }).then((response) => {
+        this.chatProxy.sendMessage(this.chatId, data).then((response) => {
             try {
                 const message = this.state.proposedMessages.get(iid);
                 this.state.proposedMessages.delete(iid);
@@ -288,7 +279,7 @@ export default class Chat extends React.Component {
         if (this.refs.chatMessagesBox.scrollTop / this.refs.chatMessagesBox.scrollHeight < 0.1 && !this.fullHistoryLoaded
                 && !this.historyLoading) {
             this.historyLoading = true;
-            this.axios.get(`/api/chat/${this.chatId}/before/${this.firstId}`)
+            this.chatProxy.getMessagesBefore(this.chatId, this.firstId)
                 .then(response => {
                     this.updateTyping(response.data.typing);
                     if (!response.data.messages) {
@@ -361,7 +352,7 @@ export default class Chat extends React.Component {
 
     render() {
         return <div className="chat-box" ref="chatBox">
-            <ChatMenu onLogout={this.onLogout.bind(this)} axios={this.axios}/>
+            <ChatMenu onLogout={this.onLogout.bind(this)} chatProxy={this.chatProxy}/>
             <div className="chat-messages-box" ref="chatMessagesBox" onScroll={this.handleMessageBoxScroll.bind(this)} onWheel={this.handleWheel.bind(this)}>
                 {this.state.messages.map((value, key) => <ChatMessage id={'cm_' + key} key={key} message={value} userData={this.props.userData}/>)}
                 {this.state.proposedMessages.map((value, key) => <ChatMessage id={'propcm_' + key} key={key} message={value} userData={this.props.userData}/>)}

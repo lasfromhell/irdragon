@@ -60,7 +60,7 @@ class CacheServiceImpl implements CacheService
         $item = $this->cache->getItem($key);
 //        $dateTime = new DateTime();
 //        Log::info('Touch item for key ' . $key . ' : ' . json_decode($item->get()));
-        $item->expiresAfter($this::TTL);
+        $item->expiresAfter($ttl);
         $this->cache->save($item);
     }
 

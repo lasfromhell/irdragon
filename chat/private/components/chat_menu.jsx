@@ -1,5 +1,4 @@
 import React from 'react';
-import Chat from "./chat";
 
 export default class ChatMenu extends React.Component {
 
@@ -21,7 +20,7 @@ export default class ChatMenu extends React.Component {
     logout() {
         if (!this.loggingOut) {
             this.loggingOut = true;
-            this.props.axios.post('/api/user/logout')
+            this.props.chatProxy.logout()
                 .finally(() => {
                     ChatMenu.removeCookie(name);
                     this.props.onLogout();

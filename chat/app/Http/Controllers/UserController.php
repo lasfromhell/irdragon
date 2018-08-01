@@ -70,7 +70,7 @@ class UserController extends Controller
             $response = new Response();
             if ($data->rememberCookie) {
 //                $response->withCookie(new Cookie('token', $token, 300));
-                $response->withCookie(new Cookie('token', $token, time() + (3600 * 8), '/',  null, false, false));
+                $response->withCookie(new Cookie('token', $token, time() + (3600 * 128), '/',  null, false, false));
             }
             return $response->setContent(json_encode($userData));
         }
