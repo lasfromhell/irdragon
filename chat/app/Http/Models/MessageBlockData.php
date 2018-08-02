@@ -12,4 +12,5 @@ namespace App\Http\Models;
 class MessageBlockData {
     public $messages;
     public $typing;
+    public $last_read_message;
 }

@@ -36,5 +36,6 @@ $router->group(['prefix' => 'api'], function () use ($router) {
         $router->post('chat/{chatId}/typingStarted', 'ChatController@typingStarted');
         $router->post('chat/{chatId}/typingFinished', 'ChatController@typingFinished');
         $router->post('chat/{chatId}/typingProgress', 'ChatController@typingProgress');
+        $router->post('chat/{chatId}/lastReadMessage/{messageId}', 'ChatController@setLastReadMessage');
     });
 });

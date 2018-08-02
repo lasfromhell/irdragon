@@ -62,4 +62,8 @@ export default class ChatProxy {
             rememberCookie: rememberCookie
         });
     }
+
+    sendLastReadMessage(chatId, messageId) {
+        return this.axios.post(`/api/chat/${chatId}/lastReadMessage/${messageId}`);
+    }
 }

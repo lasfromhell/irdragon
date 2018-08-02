@@ -19,7 +19,7 @@ class UserChatACL extends Model
      * @var array
      */
     protected $fillable = [
-        'user_id', 'chat_id'
+        'user_id', 'chat_id', 'last_read_message'
     ];
 
     protected $table = 'user_chat_acl';

@@ -37,6 +37,7 @@ export default class Base extends React.Component {
     }
 
     authenticated(userData) {
+        this.chatProxy.setToken(userData.token);
         this.setState({
             isLoggedIn: true,
             userData: userData

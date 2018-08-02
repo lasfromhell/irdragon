@@ -11,6 +11,7 @@ namespace App\Services;
 use App\Contracts\CacheService;
 use App\Contracts\MessageService;
 use App\Contracts\UserService;
+use App\DB\UserChatACL;
 use App\Http\Models\MessageBlockData;
 use App\Http\Models\MessageData;
 use App\DB\Message;
@@ -34,19 +35,19 @@ class MessageServiceImpl implements MessageService
 //        $this->LATEST_TTL = new DateInterval("P10Y");
     }
 
-    public function getLastMessagesAfterDB($chatId, $initId = -1, $limit = 100) {
+    public function getLastMessagesAfterDB($chatId, $userId, $initId = -1, $limit = 100) {
         return $this->toMessageBlockData(Message::where('chat_id', $chatId)->where('id', '>', $initId)->take($limit)->get()->map([$this, 'toMessageData'])->values()->toArray(),
-            $chatId);
+            $chatId, $userId);
     }
 
-    public function getLatestMessages($chatId, $messagesCount = 10) {
+    public function getLatestMessages($chatId, $userId, $messagesCount = 10) {
         return $this->toMessageBlockData(Message::where('chat_id', $chatId)->orderBy('id', 'desc')->take($messagesCount)->get()->reverse()
-            ->map([$this, 'toMessageData'])->values()->toArray(), $chatId);
+            ->map([$this, 'toMessageData'])->values()->toArray(), $chatId, $userId);
     }
 
-    public function getLastMessagesBeforeDB($chatId, $initId, $limit = 10) {
+    public function getLastMessagesBeforeDB($chatId, $userId, $initId, $limit = 10) {
         return $this->toMessageBlockData(Message::where('chat_id', $chatId)->where('id', '<', $initId)->orderBy('id', 'desc')->take($limit)->get()->reverse()
-            ->map([$this, 'toMessageData'])->values()->toArray(), $chatId);
+            ->map([$this, 'toMessageData'])->values()->toArray(), $chatId, $userId);
     }
 
     public function addMessage($data, $userId, $chatId) {
@@ -154,10 +155,11 @@ class MessageServiceImpl implements MessageService
         $this->cacheService->delete($this->constructTypingKey($chatId));
     }
 
-    public function toMessageBlockData($messages, $chatId) {
+    public function toMessageBlockData($messages, $chatId, $userId) {
         $messageBlockData = new MessageBlockData();
         $messageBlockData->messages = $messages;
         $messageBlockData->typing = $this->cacheService->get($this->constructTypingKey($chatId));
+        $messageBlockData->last_read_message = UserChatACL::where('chat_id', $chatId)->where('user_id', $userId)->first()->last_read_message;
         return $messageBlockData;
     }
 
@@ -167,5 +169,9 @@ class MessageServiceImpl implements MessageService
 
     public function typingProgress($userId, $chatId) {
         $this->cacheService->touch($this->constructTypingKey($chatId), self::TYPING_TTL);
+    }
+
+    public function setLastReadMessage(int $chatId, int $userId, int $messageId) {
+        UserChatACL::where('chat_id', $chatId)->where('user_id', $userId)->update(array('last_read_message' => $messageId));
     }
 }

@@ -233,3 +233,17 @@ body {
 .awesome-default:hover {
     color: #333333;
 }
+
+@keyframes new-message {
+    0%   {color: red;}
+    100% {color: black;}
+}
+
+.chat-msg-new {
+    color: red;
+}
+
+.chat-msg-new-animation {
+    animation-name: new-message;
+    animation-duration: 20s;
+}

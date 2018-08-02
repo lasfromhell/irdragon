@@ -59,7 +59,7 @@ class ChatController extends Controller
         if (!$this->checkUserChat($chatId, $userData)) {
             return ResponseUtils::buildAccessDenied();
         }
-        return response()->json($this->messageService->getLatestMessages($chatId, $number));
+        return response()->json($this->messageService->getLatestMessages($chatId, $userData->id, $number));
     }
 
     public function getMessagesAfter(int $chatId, $after, Request $request) {
@@ -71,7 +71,7 @@ class ChatController extends Controller
         if (!isset($limit)) {
             $limit = 1000;
         }
-        return response()->json($this->messageService->getLastMessagesAfterDB($chatId, $after, $limit));
+        return response()->json($this->messageService->getLastMessagesAfterDB($chatId, $userData->id, $after, $limit));
     }
 
     public function getMessagesBefore(int $chatId, $before, Request $request) {
@@ -83,7 +83,7 @@ class ChatController extends Controller
         if (!isset($limit)) {
             $limit = 20;
         }
-        return response()->json($this->messageService->getLastMessagesBeforeDB($chatId, $before, $limit));
+        return response()->json($this->messageService->getLastMessagesBeforeDB($chatId, $userData->id, $before, $limit));
     }
 
     public function getPresence(int $chatId) {
@@ -107,6 +107,12 @@ class ChatController extends Controller
     public function typingProgress(int $chatId, Request $request) {
         $userData = $request->user();
         $this->messageService->typingProgress($userData->id, $chatId);
+    }
+
+    public function setLastReadMessage(int $chatId, int $messageId, Request $request) {
+        $userData = $request->user();
+        $this->messageService->setLastReadMessage($chatId, $userData->id, $messageId);
+        return ResponseUtils::buildEmptyOkResponse();
     }
 
     private function checkUserChat($chatId, $userData) {

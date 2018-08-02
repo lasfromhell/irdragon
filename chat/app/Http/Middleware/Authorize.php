@@ -28,7 +28,8 @@ class Authorize
      */
     public function handle($request, Closure $next, $guard = null)
     {
-        $token = $request->header('Authentication-Token');
+        $token = $request->cookie('token');
+        $token = $token ?? $request->header('Authentication-Token');
         $token = $token ?? $request->json('token');
         $token = $token ?? $request->input('token');
         $token = $token ?? $request->cookie('token');
@@ -43,6 +44,12 @@ class Authorize
                 });
                 return $next($request);
             }
+            else {
+                $userData = $this->sessionService->fetchData($token);
+            }
+        }
+        else {
+            $a = 1;
         }
         return ResponseUtils::buildUnauthorized();
     }

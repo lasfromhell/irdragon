@@ -26,6 +26,8 @@ export default class Chat extends React.Component {
 
         this.lastTypingProgressDate = null;
         this.typingTimer = null;
+        this.messagesToAnimate = [];
+        this.hasNewMessages = false;
 
         this.messageGatheringStopped = false;
         this.messsageGatheringTimeout = null;
@@ -36,11 +38,13 @@ export default class Chat extends React.Component {
 
         this.loadChatSize();
 
-        this.resetNewMessagesCount();
         this.startMessagesGathering();
         this.startPresenceGathering();
 
         window.addEventListener('focus', this.onWindowActive.bind(this));
+        if (document.hasFocus()) {
+            this.onWindowActive();
+        }
     }
 
     startMessagesGathering() {
@@ -53,8 +57,12 @@ export default class Chat extends React.Component {
                     this.latestId = -1;
                 }
                 else {
-                    this.updateStateByNewMessages(response.data.messages);
-                    this.firstId = response.data.messages[response.data.messages.length-1].id;//this.state.messages.min().id;
+                    this.updateStateByNewMessages(response.data.messages, true, false, response.data.last_read_message);
+                    this.firstId = response.data.messages[0].id;//this.state.messages.min().id;
+                }
+                this.updateNewMessageCount(response.data.last_read_message);
+                if (document.hasFocus()) {
+                    this.onWindowActive();
                 }
                 this.loadPreviousMessages();
                 this.messsageGatheringTimeout = setTimeout(this.sendRequestOnLatestMessages.bind(this), 1000)
@@ -73,10 +81,13 @@ export default class Chat extends React.Component {
         this.chatProxy.getMessagesAfter(this.chatId, this.latestId)
             .then(response => {
                 this.updateTyping(response.data.typing);
-                if (!response.data.messages || response.data.messages.length === 0) {
-                    return;
+                if (response.data.messages && response.data.messages.length) {
+                    this.updateStateByNewMessages(response.data.messages, true, false, response.data.last_read_message);
                 }
-                this.updateStateByNewMessages(response.data.messages);
+                this.updateNewMessageCount(response.data.last_read_message);
+                if (document.hasFocus()) {
+                    this.onWindowActive();
+                }
             })
             .catch(error => {
                 console.error('Unable to get latest messages', error);
@@ -86,25 +97,38 @@ export default class Chat extends React.Component {
             });
     }
 
-    updateStateByNewMessages(messages, modifyLatestId = true, proposed = false) {
+    updateStateByNewMessages(messages, modifyLatestId = true, proposed = false, lastReadMessage) {
         if (proposed) {
             this.setStateProposedMessages(messages);
         }
         else {
-            this.setStateMessages(messages);
+            this.setStateMessages(messages, lastReadMessage);
         }
         Chat.scrollToBottom(this.refs.chatMessagesBox);
         if (modifyLatestId) {
             this.latestId = messages[messages.length - 1].id;//this.state.messages.max().id;
-            if (!document.hasFocus()) {
-                this.newMessagesCount += messages.length;
-                this.updateTitle();
-            }
         }
     }
 
-    setStateMessages(newMessages) {
+    setStateMessages(newMessages, lastReadMessage) {
         newMessages.forEach(message => {
+            if (message.fromId !== this.props.userData.id) {
+                const hasFocus = document.hasFocus();
+                if (hasFocus && message.highlightNew) {
+                    message.animateNew = true;
+                }
+                if (lastReadMessage < message.id) {
+                    if (!message.highlightNew) {
+                        message.highlightNew = true;
+                    }
+                    if (hasFocus) {
+                        message.animateNew = true;
+                    }
+                    else {
+                        this.messagesToAnimate.push(message);
+                    }
+                }
+            }
             this.state.messages.set(message.id, message);
         });
         this.setState({messages: this.state.messages});
@@ -233,7 +257,7 @@ export default class Chat extends React.Component {
                 console.error(e);
             }
         }).catch((error) => {
-            if (!error.response) {
+            if (!error.response || error.response.status === 401) {
                 setTimeout(() => this.sendMessageData(data), 1000);
             }
             else {
@@ -289,8 +313,8 @@ export default class Chat extends React.Component {
                         this.fullHistoryLoaded = true;
                         return;
                     }
-                    this.setStateMessages(response.data.messages);
-                    this.firstId = this.state.messages.min().id;
+                    this.setStateMessages(response.data.messages, response.data.last_read_message);
+                    this.firstId = response.data.messages[0].id;
                     this.loadPreviousMessages();
                 })
                 .finally(() => {
@@ -304,16 +328,22 @@ export default class Chat extends React.Component {
     }
 
     onWindowActive() {
-        this.resetNewMessagesCount();
-    }
-
-    resetNewMessagesCount() {
-        this.newMessagesCount = 0;
-        this.props.updateTitleCB("IR Dragon");
+        if (this.hasNewMessages) {
+            this.chatProxy.sendLastReadMessage(this.chatId, this.latestId);
+            this.hasNewMessages = false;
+        }
+        if (this.messagesToAnimate.length > 0) {
+            this.setStateMessages(this.messagesToAnimate);
+            this.messagesToAnimate.length = 0;
+        }
     }
 
     updateTitle() {
-        this.props.updateTitleCB(`[${this.newMessagesCount}] IR Dragon`);
+        if (this.newMessagesCount) {
+            this.props.updateTitleCB(`[${this.newMessagesCount}] IR Dragon`);
+        } else {
+            this.props.updateTitleCB("IR Dragon");
+        }
     }
 
     loadChatSize() {
@@ -348,6 +378,12 @@ export default class Chat extends React.Component {
     onLogout () {
         this.stopProcessing();
         this.props.onLogout()
+    }
+
+    updateNewMessageCount(lastReadMessage) {
+        this.newMessagesCount = this.messagesToAnimate.length;
+        this.hasNewMessages = lastReadMessage - this.latestId;
+        this.updateTitle();
     }
 
     render() {

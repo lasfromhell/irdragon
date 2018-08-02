@@ -15,7 +15,8 @@ export default class ChatMessage extends React.Component {
                 <div className="chat-msg-header"><span className="chat-time">{new Date(this.props.message.date * 1000).toLocaleString()}</span><span
                     className="chat-author">{this.props.message.from}</span>
                 </div>
-                <div className={"chat-msg-body " + (this.props.message.clientSent ? "chat-msg-client" : "")}><span className="chat-msg-text" dangerouslySetInnerHTML={{__html: this.processMessage(this.props.message.message)}}/></div>
+                <div className={"chat-msg-body " + (this.props.message.clientSent ? "chat-msg-client" : "") +
+                    (this.props.message.highlightNew && !this.props.message.animateNew ? ' chat-msg-new' : "") + (this.props.message.animateNew ? ' chat-msg-new-animation ' : " ")}><span className="chat-msg-text" dangerouslySetInnerHTML={{__html: this.processMessage(this.props.message.message)}}/></div>
             </div>;
     }
 }
