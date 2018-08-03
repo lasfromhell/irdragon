@@ -2,8 +2,8 @@
 /**
  * Created by PhpStorm.
  * User: lasfr
- * Date: 16.07.2018
- * Time: 22:18
+ * Date: 03.08.2018
+ * Time: 23:18
  */
 
 namespace App\Http\Models;
@@ -11,18 +11,18 @@ namespace App\Http\Models;
 
 class PresenceData
 {
-    public $activityDate;
-    public $displayName;
+    public $online;
+    public $action;
 
     /**
      * PresenceData constructor.
-     * @param $activityDate
-     * @param $displayName
+     * @param $online
+     * @param $action
      */
-    public function __construct($activityDate, $displayName)
+    public function __construct($online, $action)
     {
-        $this->activityDate = $activityDate;
-        $this->displayName = $displayName;
+        $this->online = $online;
+        $this->action = $action;
     }
 
 

@@ -29,13 +29,14 @@ $router->group(['prefix' => 'api'], function () use ($router) {
         $router->post('user/logout', 'UserController@logout');
         $router->post('chat/{chatId}/message', 'ChatController@sendMessage');
         $router->get('chat/{chatId}/latest/{number}', 'ChatController@getLatestMessages');
-        $router->get('chat/{chatId}/after/{after}', 'ChatController@getMessagesAfter');
-        $router->get('chat/{chatId}/before/{before}', 'ChatController@getMessagesBefore');
+        $router->get('chat/{chatId}/after/{after}/{number}', 'ChatController@getMessagesAfter');
+        $router->get('chat/{chatId}/before/{before}/{number}', 'ChatController@getMessagesBefore');
         $router->get('chat/{chatId}/presence', 'ChatController@getPresence');
         $router->get('chat/events', 'ChatController@events');
         $router->post('chat/{chatId}/typingStarted', 'ChatController@typingStarted');
         $router->post('chat/{chatId}/typingFinished', 'ChatController@typingFinished');
         $router->post('chat/{chatId}/typingProgress', 'ChatController@typingProgress');
         $router->post('chat/{chatId}/lastReadMessage/{messageId}', 'ChatController@setLastReadMessage');
+        $router->post('user/action', 'UserController@userAction');
     });
 });

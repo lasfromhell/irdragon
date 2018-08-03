@@ -12,6 +12,7 @@ use App\Contracts\MessageService;
 use App\Contracts\PresenceService;
 use App\Contracts\SessionService;
 use App\Contracts\UserService;
+use App\Http\Models\PresenceData;
 use App\Http\Models\SendMessageData;
 use App\Services\ResponseUtils;
 use Illuminate\Http\Request;
@@ -62,34 +63,27 @@ class ChatController extends Controller
         return response()->json($this->messageService->getLatestMessages($chatId, $userData->id, $number));
     }
 
-    public function getMessagesAfter(int $chatId, $after, Request $request) {
+    public function getMessagesAfter(int $chatId, $after, Request $request, $number = 50) {
         $userData = $request->user();
         if (!$this->checkUserChat($chatId, $userData)) {
             return ResponseUtils::buildAccessDenied();
         }
-        $limit = $request::capture()->json()->get('$limit');
-        if (!isset($limit)) {
-            $limit = 1000;
-        }
-        return response()->json($this->messageService->getLastMessagesAfterDB($chatId, $userData->id, $after, $limit));
+        return response()->json($this->messageService->getLastMessagesAfterDB($chatId, $userData->id, $after, $number));
     }
 
-    public function getMessagesBefore(int $chatId, $before, Request $request) {
+    public function getMessagesBefore(int $chatId, $before, Request $request, int $number = 50) {
         $userData = $request->user();
         if (!$this->checkUserChat($chatId, $userData)) {
             return ResponseUtils::buildAccessDenied();
         }
-        $limit = $request::capture()->json()->get('$limit');
-        if (!isset($limit)) {
-            $limit = 20;
-        }
-        return response()->json($this->messageService->getLastMessagesBeforeDB($chatId, $userData->id, $before, $limit));
+        return response()->json($this->messageService->getLastMessagesBeforeDB($chatId, $userData->id, $before, $number));
     }
 
     public function getPresence(int $chatId) {
         $userDates = array();
         $this->userService->getChatUsers($chatId)->each(function($uc) use (&$userDates) {
-            $userDates[$uc->user_id] = $this->presenceService->getOnlineDate($uc->user_id);
+            $userDates[$uc->user_id] =
+                new PresenceData($this->presenceService->getOnlineDate($uc->user_id), $this->presenceService->getActionDate($uc->user_id));
         });
         return response()->json($userDates);
     }

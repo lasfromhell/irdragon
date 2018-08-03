@@ -13,4 +13,6 @@ interface PresenceService
 {
     public function updateOnlineDate($userId, $displayName);
     public function getOnlineDate($userId);
+    public function updateActionDate($userId, $displayName);
+    public function getActionDate($userId);
 }

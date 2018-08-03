@@ -8,6 +8,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Contracts\PresenceService;
 use App\Contracts\SessionService;
 use App\Contracts\UserService;
 use App\Http\Models\UserData;
@@ -21,10 +22,12 @@ class UserController extends Controller
 {
     protected $userService;
     protected $sessionService;
+    protected $presenceService;
 
-    public function __construct(UserService $userService, SessionService $sessionService) {
+    public function __construct(UserService $userService, SessionService $sessionService, PresenceService $presenceService) {
         $this->userService = $userService;
         $this->sessionService = $sessionService;
+        $this->presenceService = $presenceService;
     }
 
     public function encodePassword(Request $request) {
@@ -86,5 +89,10 @@ class UserController extends Controller
     public function logout(Request $request) {
         $this->sessionService->removeToken($request->user()->token);
         return ResponseUtils::buildEmptyOkResponse();
+    }
+
+    public function userAction(Request $request) {
+        $userData = $request->user();
+        $this->presenceService->updateActionDate($userData->id, $userData->displayName);
     }
 }

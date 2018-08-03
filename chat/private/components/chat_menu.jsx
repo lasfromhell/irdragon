@@ -30,10 +30,13 @@ export default class ChatMenu extends React.Component {
     }
 
     render() {
-        return <div className="chat-menu">
-            <i className="awesome-default fas fa-sign-out-alt" onClick={this.logout.bind(this)}/>
-            <div className={"chat-preferences-block " + (this.state.showMenu ? "" : "hidden ")} >
-                <div className="chat-preferences-item" onClick={this.logout.bind(this)}>Logout</div>
+        return <div className="chat-header">
+            <span className="chat-header-text">{this.props.headerMessage}</span>
+            <div className="chat-menu">
+                <i className="awesome-default fas fa-sign-out-alt" onClick={this.logout.bind(this)}/>
+                <div className={"chat-preferences-block " + (this.state.showMenu ? "" : "hidden ")} >
+                    <div className="chat-preferences-item" onClick={this.logout.bind(this)}>Logout</div>
+                </div>
             </div>
         </div>;
     }

@@ -14,7 +14,9 @@ export default class Chat extends React.Component {
         this.state = {
             messages: new SortedMap(),
             proposedMessages: new SortedMap(),
-            data: ''
+            data: '',
+            serverError: false,
+            headerMessage: ''
         };
         this.chatId = this.props.userData.chats[0];
 
@@ -35,6 +37,8 @@ export default class Chat extends React.Component {
         this.presenceGatheringInterval = null;
         this.chatProxy = props.chatProxy;
         this.chatProxy.setGoToHomeCallback(this.onLogout.bind(this));
+        this.chatProxy.setErrorCallback(this.onServerError.bind(this));
+        this.chatProxy.setSuccessCallback(this.onServerSuccess.bind(this));
 
         this.loadChatSize();
 
@@ -80,6 +84,9 @@ export default class Chat extends React.Component {
         const requestInitTime = new Date().getTime();
         this.chatProxy.getMessagesAfter(this.chatId, this.latestId)
             .then(response => {
+                this.setState({
+                    headerMessage: 'Last update time: ' + new Date().toLocaleString()
+                });
                 this.updateTyping(response.data.typing);
                 if (response.data.messages && response.data.messages.length) {
                     this.updateStateByNewMessages(response.data.messages, true, false, response.data.last_read_message);
@@ -152,7 +159,8 @@ export default class Chat extends React.Component {
                     for (const line in response.data) {
                         if (response.data.hasOwnProperty(line))
                         if (response.data[line] != null) {
-                            console.info(`${response.data[line].displayName}: ${new Date(response.data[line].activityDate * 1000)}`)
+                            console.info(`Action: ${this.presenceItemToString(response.data[line].action)}` +
+                                `; Online: ${this.presenceItemToString(response.data[line].online)}`)
                         }
                     }
                 })
@@ -162,6 +170,10 @@ export default class Chat extends React.Component {
         };
         gatheringFunc();
         this.presenceGatheringInterval = setInterval(gatheringFunc, 10000);
+    }
+
+    presenceItemToString(presenceItem) {
+        return presenceItem ? `${presenceItem.displayName}: ${new Date(presenceItem.activityDate * 1000)}` : '';
     }
 
     handleInputKeyPress(event) {
@@ -303,7 +315,12 @@ export default class Chat extends React.Component {
         if (this.refs.chatMessagesBox.scrollTop / this.refs.chatMessagesBox.scrollHeight < 0.1 && !this.fullHistoryLoaded
                 && !this.historyLoading) {
             this.historyLoading = true;
-            this.chatProxy.getMessagesBefore(this.chatId, this.firstId)
+            let wasScrolled = false;
+            if (!this.refs.chatMessagesBox.scrollTop) {
+                this.refs.chatMessagesBox.scrollTop++;
+                wasScrolled = true;
+            }
+            this.chatProxy.getMessagesBefore(this.chatId, this.firstId, 30)
                 .then(response => {
                     this.updateTyping(response.data.typing);
                     if (!response.data.messages) {
@@ -315,10 +332,13 @@ export default class Chat extends React.Component {
                     }
                     this.setStateMessages(response.data.messages, response.data.last_read_message);
                     this.firstId = response.data.messages[0].id;
-                    this.loadPreviousMessages();
+                    setTimeout(this.loadPreviousMessages.bind(this), 1000);
                 })
                 .finally(() => {
                     this.historyLoading = false;
+                    if (wasScrolled) {
+                        this.refs.chatMessagesBox.scrollTop--;
+                    }
                 })
         }
     }
@@ -386,9 +406,21 @@ export default class Chat extends React.Component {
         this.updateTitle();
     }
 
+    onServerError() {
+        this.setState({
+            serverError: true
+        });
+    }
+
+    onServerSuccess() {
+        this.setState({
+            serverError: false
+        });
+    }
+
     render() {
-        return <div className="chat-box" ref="chatBox">
-            <ChatMenu onLogout={this.onLogout.bind(this)} chatProxy={this.chatProxy}/>
+        return <div className={"chat-box" + (this.state.serverError ? " chat-box-error" : "")} ref="chatBox">
+            <ChatMenu onLogout={this.onLogout.bind(this)} chatProxy={this.chatProxy} headerMessage={this.state.headerMessage}/>
             <div className="chat-messages-box" ref="chatMessagesBox" onScroll={this.handleMessageBoxScroll.bind(this)} onWheel={this.handleWheel.bind(this)}>
                 {this.state.messages.map((value, key) => <ChatMessage id={'cm_' + key} key={key} message={value} userData={this.props.userData}/>)}
                 {this.state.proposedMessages.map((value, key) => <ChatMessage id={'propcm_' + key} key={key} message={value} userData={this.props.userData}/>)}

@@ -9,6 +9,14 @@ export default class ChatProxy {
         this.axios.setGoToHomeCallback(callback);
     }
 
+    setErrorCallback(callback) {
+        this.axios.setErrorCallback(callback);
+    }
+
+    setSuccessCallback(callback) {
+        this.axios.setSuccessCallback(callback);
+    }
+
     setToken(token) {
         this.axios.setHeader('Authentication-Token', token);
     }
@@ -21,16 +29,16 @@ export default class ChatProxy {
         return this.axios.post("/api/user/authorize");
     }
 
-    getMessagesAfter(chatId, after) {
-        return this.axios.get(`/api/chat/${chatId}/after/${after}`);
+    getMessagesAfter(chatId, after, number = 50) {
+        return this.axios.get(`/api/chat/${chatId}/after/${after}/${number}`);
     }
 
     getPresence(chatId) {
         return this.axios.get(`/api/chat/${chatId}/presence`);
     }
 
-    getMessagesBefore(chatId, before) {
-        return this.axios.get(`/api/chat/${chatId}/before/${before}`);
+    getMessagesBefore(chatId, before, number = 30) {
+        return this.axios.get(`/api/chat/${chatId}/before/${before}/${number}`);
     }
 
     sendTypingStarted(chatId) {
@@ -65,5 +73,9 @@ export default class ChatProxy {
 
     sendLastReadMessage(chatId, messageId) {
         return this.axios.post(`/api/chat/${chatId}/lastReadMessage/${messageId}`);
+    }
+
+    sendAction() {
+        return this.axios.post(`/api/user/action`);
     }
 }
