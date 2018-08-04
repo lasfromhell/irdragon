@@ -1,4 +1,5 @@
 import React from "react";
+import Chat from "./chat";
 
 export default class ChatMessage extends React.Component {
     constructor(props) {
@@ -12,7 +13,7 @@ export default class ChatMessage extends React.Component {
 
     render() {
         return <div className={"chat-msg " + (this.props.message.from === this.props.userData.displayName ? "msg-mine" : "msg-yours")} id={this.props.id}>
-                <div className="chat-msg-header"><span className="chat-time">{new Date(this.props.message.date * 1000).toLocaleString()}</span><span
+                <div className="chat-msg-header"><span className="chat-time">{Chat.formatDate(new Date(this.props.message.date * 1000))}</span><span
                     className="chat-author">{this.props.message.from}</span>
                 </div>
                 <div className={"chat-msg-body " + (this.props.message.clientSent ? "chat-msg-client" : "") +

@@ -231,10 +231,16 @@ body {
     color: black;
     vertical-align: middle;
     line-height: 1.3em;
+    padding: 0 0.2em;
+    border-left: 1px solid black;
 }
 
 .awesome-default:hover {
     color: #333333;
+}
+
+.awesome-default.awesome-selected:hover {
+    color: silver;
 }
 
 @keyframes new-message {
@@ -259,4 +265,63 @@ body {
 .chat-header-text {
     line-height: 2em;
     padding-left: 1em;
+}
+
+.awesome-selected {
+    color: cornsilk;
+}
+
+.chat-menu-data {
+    margin-bottom: 0.2em;
+    transition: max-height 0.5s ease-out;
+    max-height: 0;
+    overflow: hidden;
+}
+
+.chat-menu-data-animate {
+    max-height: 20em;
+    transition: max-height 0.5s ease-in;
+}
+
+.presence-items-block {
+    border-bottom: 1px solid black;
+    padding: 0.1em 0.3em;
+}
+
+.presence-item {
+    margin: 0.1em 0;
+    display: flex;
+    vertical-align: middle;
+}
+
+.presence-name {
+    display: inline-block;
+    font-weight: bold;
+    width: 7em;
+    vertical-align: middle;
+}
+
+.presence-status {
+    height: 0.8em;
+    display: inline-block;
+    width: 0.8em;
+    border: 1px solid black;
+    margin: 0 0.3em;
+    border-radius: 0.8em;
+}
+
+.presence-status-online {
+    background: lightgreen;
+}
+
+.presence-status-offline {
+    background: indianred;
+}
+
+.presence-status-away {
+    background: yellow;
+}
+
+.presence-date {
+    margin-left: 0.3em;
 }

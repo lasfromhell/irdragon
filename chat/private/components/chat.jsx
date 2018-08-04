@@ -2,6 +2,7 @@ import React from 'react';
 import ChatMessage from "./chat_message";
 import SortedMap from 'collections/sorted-map'
 import ChatMenu from "./chat_menu";
+import {Observable, Subject, BehaviorSubject} from 'rxjs';
 const uuidv1 = require('uuid/v1');
 
 const TYPING_OFFSET_MS = 1000;
@@ -40,12 +41,22 @@ export default class Chat extends React.Component {
         this.chatProxy.setErrorCallback(this.onServerError.bind(this));
         this.chatProxy.setSuccessCallback(this.onServerSuccess.bind(this));
 
+        this.presenceObservable = new BehaviorSubject({});
+        this.observables = {
+            presence: this.presenceObservable
+        };
+        this.control = {
+            fullScreen: this.onFullScreen.bind(this)
+        };
+        this.scrolledToBottom = true;
+
         this.loadChatSize();
 
         this.startMessagesGathering();
         this.startPresenceGathering();
 
         window.addEventListener('focus', this.onWindowActive.bind(this));
+        window.addEventListener('resize', this.onWindowResize.bind(this));
         if (document.hasFocus()) {
             this.onWindowActive();
         }
@@ -84,8 +95,9 @@ export default class Chat extends React.Component {
         const requestInitTime = new Date().getTime();
         this.chatProxy.getMessagesAfter(this.chatId, this.latestId)
             .then(response => {
+                const date = new Date();
                 this.setState({
-                    headerMessage: 'Last update time: ' + new Date().toLocaleString()
+                    headerMessage: 'Updated: ' + Chat.toTwoDigits(date.getHours()) + ":" + Chat.toTwoDigits(date.getMinutes()) + ":" + Chat.toTwoDigits(date.getSeconds())
                 });
                 this.updateTyping(response.data.typing);
                 if (response.data.messages && response.data.messages.length) {
@@ -102,6 +114,13 @@ export default class Chat extends React.Component {
             .then(() => {
                 this.messsageGatheringTimeout = setTimeout(this.sendRequestOnLatestMessages.bind(this), Math.max(0, 1000 - (new Date().getTime() - requestInitTime)));
             });
+    }
+
+    static toTwoDigits(digit) {
+        if (digit < 10) {
+            return '0' + digit;
+        }
+        return digit;
     }
 
     updateStateByNewMessages(messages, modifyLatestId = true, proposed = false, lastReadMessage) {
@@ -157,22 +176,25 @@ export default class Chat extends React.Component {
             this.chatProxy.getPresence(this.chatId).then(response => {
                     console.info('Presence received:');
                     for (const line in response.data) {
-                        if (response.data.hasOwnProperty(line))
-                        if (response.data[line] != null) {
-                            console.info(`Action: ${this.presenceItemToString(response.data[line].action)}` +
-                                `; Online: ${this.presenceItemToString(response.data[line].online)}`)
+                        if (response.data.hasOwnProperty(line)) {
+                            if (response.data[line] != null) {
+                                const presenceItem = response.data[line];
+                                console.info(`Action: ${Chat.presenceItemToString(presenceItem.action)}` +
+                                    `; Online: ${Chat.presenceItemToString(presenceItem.online)}`);
+                            }
                         }
                     }
+                    this.presenceObservable.next(response.data);
                 })
                 .catch(e => {
                     console.log(e);
                 });
         };
         gatheringFunc();
-        this.presenceGatheringInterval = setInterval(gatheringFunc, 10000);
+        this.presenceGatheringInterval = setInterval(gatheringFunc, 3000);
     }
 
-    presenceItemToString(presenceItem) {
+    static presenceItemToString(presenceItem) {
         return presenceItem ? `${presenceItem.displayName}: ${new Date(presenceItem.activityDate * 1000)}` : '';
     }
 
@@ -294,6 +316,7 @@ export default class Chat extends React.Component {
 
     static scrollToBottom(element) {
         element.scrollTop = element.scrollHeight;
+        this.scrolledToBottom = true;
     }
 
     static resetCursor(txtElement) {
@@ -309,6 +332,12 @@ export default class Chat extends React.Component {
 
     handleMessageBoxScroll() {
         this.loadPreviousMessages();
+        if (this.refs.chatMessagesBox.scrollTop + this.refs.chatMessagesBox.offsetHeight >= this.refs.chatMessagesBox.scrollHeight) {
+            this.scrolledToBottom = true;
+        }
+        else {
+            this.scrolledToBottom = false;
+        }
     }
 
     loadPreviousMessages() {
@@ -418,9 +447,27 @@ export default class Chat extends React.Component {
         });
     }
 
+    onFullScreen() {
+        this.refs.chatBox.style.height = '100%';
+        this.refs.chatBox.style.width = '100%';
+    }
+
+    onWindowResize() {
+        if (this.scrolledToBottom) {
+            setTimeout(() => {
+                this.refs.chatMessagesBox.scrollTop = this.refs.chatMessagesBox.scrollHeight;
+            }, 10);
+        }
+    }
+
+    static formatDate(date) {
+        return Chat.toTwoDigits(date.getDay()) + "." + Chat.toTwoDigits(date.getMonth()) + "." + date.getFullYear() + " " +
+            Chat.toTwoDigits(date.getHours()) + ":" + Chat.toTwoDigits(date.getMinutes()) + ":" + Chat.toTwoDigits(date.getSeconds());
+    }
+
     render() {
         return <div className={"chat-box" + (this.state.serverError ? " chat-box-error" : "")} ref="chatBox">
-            <ChatMenu onLogout={this.onLogout.bind(this)} chatProxy={this.chatProxy} headerMessage={this.state.headerMessage}/>
+            <ChatMenu onLogout={this.onLogout.bind(this)} chatProxy={this.chatProxy} headerMessage={this.state.headerMessage} observables={this.observables} control={this.control}/>
             <div className="chat-messages-box" ref="chatMessagesBox" onScroll={this.handleMessageBoxScroll.bind(this)} onWheel={this.handleWheel.bind(this)}>
                 {this.state.messages.map((value, key) => <ChatMessage id={'cm_' + key} key={key} message={value} userData={this.props.userData}/>)}
                 {this.state.proposedMessages.map((value, key) => <ChatMessage id={'propcm_' + key} key={key} message={value} userData={this.props.userData}/>)}
