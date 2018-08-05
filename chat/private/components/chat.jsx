@@ -5,8 +5,8 @@ import ChatMenu from "./chat_menu";
 import {Observable, Subject, BehaviorSubject} from 'rxjs';
 const uuidv1 = require('uuid/v1');
 
-const TYPING_OFFSET_MS = 1000;
-const TYPING_REFRESH_SEND_OFFSET_MS = 1000;
+const TYPING_OFFSET_MS = 3000;
+const TYPING_REFRESH_SEND_OFFSET_MS = 3000;
 
 export default class Chat extends React.Component {
 
@@ -208,16 +208,13 @@ export default class Chat extends React.Component {
             }
             else {
                 const selStart = this.refs.chatInput.selectionStart;
-                const lastStrPart = this.state.data.substr(selStart);
-                this.setState({
-                    data: this.state.data.substr(0, selStart) + "\n" + lastStrPart
-                }, () => {
-                    this.refs.chatInput.selectionStart = selStart + 1;
-                    this.refs.chatInput.selectionEnd = selStart + 1;
-                    if (lastStrPart.indexOf('\n') === -1) {
-                        Chat.scrollToBottom(this.refs.chatInput);
-                    }
-                });
+                const lastStrPart = this.refs.chatInput.value.substr(selStart);
+                this.refs.chatInput.value = this.refs.chatInput.value.substr(0, selStart) + "\n" + lastStrPart
+                this.refs.chatInput.selectionStart = selStart + 1;
+                this.refs.chatInput.selectionEnd = selStart + 1;
+                if (lastStrPart.indexOf('\n') === -1) {
+                    Chat.scrollToBottom(this.refs.chatInput);
+                }
             }
         }
         if (messageSent) {
@@ -259,10 +256,11 @@ export default class Chat extends React.Component {
     }
 
     sendMessage() {
-        const data = this.state.data;
-        this.setState({
-            data: ''
-        });
+        const data = this.refs.chatInput.value;
+        if (data === '') {
+            return;
+        }
+        this.refs.chatInput.value = '';
         const iid = uuidv1();
         this.updateStateByNewMessages([{
             iid: iid,
@@ -461,7 +459,7 @@ export default class Chat extends React.Component {
     }
 
     static formatDate(date) {
-        return Chat.toTwoDigits(date.getDay()) + "." + Chat.toTwoDigits(date.getMonth()) + "." + date.getFullYear() + " " +
+        return Chat.toTwoDigits(date.getDate()) + "." + Chat.toTwoDigits(date.getMonth()+1) + "." + date.getFullYear() + " " +
             Chat.toTwoDigits(date.getHours()) + ":" + Chat.toTwoDigits(date.getMinutes()) + ":" + Chat.toTwoDigits(date.getSeconds());
     }
 
@@ -474,7 +472,7 @@ export default class Chat extends React.Component {
             </div>
             <div className="chat-typing-area" ref="typingArea"><span className="chat-typing-text" ref="typingText"/></div>
             <div className="chat-line"/>
-            <textarea className="chat-input" ref="chatInput" onKeyPress={this.handleInputKeyPress.bind(this) } onChange={ this.handleInputChange.bind(this) } value={this.state.data}/>
+            <textarea className="chat-input" ref="chatInput" onKeyPress={this.handleInputKeyPress.bind(this) }/>
         </div>;
     }
 }

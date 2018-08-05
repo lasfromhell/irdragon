@@ -45,10 +45,16 @@ body {
 }
 
 .chat-msg-body {
-	padding: 2pt 4pt 0 4pt;
     overflow-wrap: break-word;
     word-break: break-word;
-    white-space: pre-line;
+    white-space: pre-wrap;
+    padding: 0 0.5em;
+    display: inline-block;
+    text-align: left;
+}
+
+.msg-yours > .chat-msg-body.chat-msg-multiline {
+    border-left: 1px dotted black;
 }
 
 .chat-msg-text {
@@ -208,6 +214,7 @@ body {
 
 .chat-msg-client {
     color: gray;
+    overflow: hidden;
 }
 
 .form-submit-checkbox {
@@ -324,4 +331,9 @@ body {
 
 .presence-date {
     margin-left: 0.3em;
+}
+
+.smile {
+    vertical-align: middle;
+    height: 2em;
 }

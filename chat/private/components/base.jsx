@@ -57,7 +57,7 @@ export default class Base extends React.Component {
             return;
         }
         const currentActivity = new Date().getTime();
-        if (currentActivity - this.lastActivity > 3000) {
+        if (currentActivity - this.lastActivity > 5000) {
             this.chatProxy.sendAction();
             this.lastActivity = currentActivity;
         }

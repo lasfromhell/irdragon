@@ -8,20 +8,20 @@ export default class PresenceComponent extends React.Component {
     }
 
     calculateStatus() {
+        let presenceDate;
         const currentDate = new Date().getTime();
         if (this.item.online) {
             const diff = currentDate - this.item.online.activityDate * 1000;
-            this.online = diff < 7000;
+            this.online = diff < 12000;
         }
         if (this.item.action) {
             const diff = currentDate - this.item.action.activityDate * 1000;
-            this.active = diff < 10000;
+            this.active = diff < 15000;
         }
-        let presenceDate;
-        if (this.online) {
+        if (this.online && this.item.action) {
             presenceDate = new Date(this.item.action.activityDate * 1000);
         }
-        else {
+        else if (this.item.online) {
             presenceDate = new Date(this.item.online.activityDate * 1000);
         }
         this.presenceDateString = Chat.formatDate(presenceDate);

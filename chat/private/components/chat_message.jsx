@@ -6,9 +6,30 @@ export default class ChatMessage extends React.Component {
         super(props);
     }
 
-    processMessage(message) {
-        message = message.replace(/</g, '&lt;');
-        return message.replace(/(\w{1,10}:\/\/[-a-zA-Z0-9@:%._\+~#=]{2,256}\.[a-z]{2,6}\b[-a-zA-Z0-9@:%_\+.~#?&//=]*)/g, '<a target="_blank" rel="noopener noreferrer" href="$1">$1</a>');
+    static processMessage(message) {
+        if (message.indexOf('`') === 0) {
+            message = message.replace('`', '');
+        }
+        else {
+            message = message.replace(/(:D)|(:=D)|(:-D)|(:d)|(:=d)|(:-d)/g, '<img class="smile" src="images/smiles/01.gif"/>');
+            message = message.replace(/(:o)|(:=o)|(:-o)|(:O)|(:=O)|(:-O)/g, '<img class="smile" src="images/smiles/02.gif"/>');
+            message = message.replace(/\(love\)/g, '<img class="smile" src="images/smiles/05.gif"/>');
+            message = message.replace(/(;\))|(;=\))|(;-\))/g, '<img class="smile" src="images/smiles/07.gif"/>');
+            message = message.replace(/\(kiss\)/g, '<img class="smile" src="images/smiles/08.gif"/>');
+            message = message.replace(/(:\))|(:=\))|(:-\))/g, '<img class="smile" src="images/smiles/09.gif"/>');
+            message = message.replace(/(:\()|(:=\()|(:-\()/g, '<img class="smile" src="images/smiles/13.gif"/>');
+            message = message.replace(/(:'\()|(:'=\()|(:'-\()/g, '<img class="smile" src="images/smiles/16.gif"/>');
+            message = message.replace(/\(cool\)/g, '<img class="smile" src="images/smiles/28.gif"/>');
+            message = message.replace(/\(vomit\)/g, '<img class="smile" src="images/smiles/30.gif"/>');
+            message = message.replace(/\(devil\)/g, '<img class="smile" src="images/smiles/31.gif"/>');
+            message = message.replace(/\(angel\)/g, '<img class="smile" src="images/smiles/32.gif"/>');
+            message = message.replace(/(\w{1,10}:\/\/[-a-zA-Z0-9@:%._\+~#=]{2,256}\.[a-z]{2,6}\b[-a-zA-Z0-9@:%_\+.~#?&//=]*)/g, '<a target="_blank" rel="noopener noreferrer" href="$1">$1</a>');
+        }
+        return message;
+    }
+
+    static isMultiline(message) {
+        return message.indexOf('\n') >= 0;
     }
 
     render() {
@@ -17,7 +38,27 @@ export default class ChatMessage extends React.Component {
                     className="chat-author">{this.props.message.from}</span>
                 </div>
                 <div className={"chat-msg-body " + (this.props.message.clientSent ? "chat-msg-client" : "") +
-                    (this.props.message.highlightNew && !this.props.message.animateNew ? ' chat-msg-new' : "") + (this.props.message.animateNew ? ' chat-msg-new-animation ' : " ")}><span className="chat-msg-text" dangerouslySetInnerHTML={{__html: this.processMessage(this.props.message.message)}}/></div>
+                    (this.props.message.highlightNew && !this.props.message.animateNew ? ' chat-msg-new' : "") +
+                    (this.props.message.animateNew ? ' chat-msg-new-animation' : "") +
+                    (ChatMessage.isMultiline(this.props.message.message) ? " chat-msg-multiline" : "")
+                }><span className="chat-msg-text" dangerouslySetInnerHTML={{__html: ChatMessage.processMessage(this.props.message.message)}}/></div>
             </div>;
     }
 }
+
+/*
+
+09 :) :=) :-)
+13 :( :=( :-(
+01 :D :=D :-D :d :=d :-d
+02 :o :=o :-o :O :=O :-O
+08 (kiss)
+05 (love)
+07 ;) ;=) ;-)
+16 :'( :'-( :'=(
+28 (cool)
+30 (vomit)
+31 (devil)
+32 (angel)
+
+ */
