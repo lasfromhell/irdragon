@@ -11,6 +11,8 @@ export default class ChatMessage extends React.Component {
             message = message.replace('`', '');
         }
         else {
+            message = message.replace(/{img:([a-z0-9-]+\.[a-z]{3,4})}/g, '<a href="images/uploaded/$1" target="_blank"><img class="thumbnail" src="images/uploaded/thumbnails/$1"/></a>');
+            message = message.replace(/(\w{1,10}:\/\/[-a-zA-Z0-9@:%._\+~#=]{2,256}\.[a-z]{2,6}\b[-a-zA-Z0-9@:%_\+.~#?&//=]*)/g, '<a target="_blank" rel="noopener noreferrer" href="$1">$1</a>');
             message = message.replace(/(:D)|(:=D)|(:-D)|(:d)|(:=d)|(:-d)/g, '<img class="smile" src="images/smiles/01.gif"/>');
             message = message.replace(/(:o)|(:=o)|(:-o)|(:O)|(:=O)|(:-O)/g, '<img class="smile" src="images/smiles/02.gif"/>');
             message = message.replace(/\(love\)/g, '<img class="smile" src="images/smiles/05.gif"/>');
@@ -23,7 +25,6 @@ export default class ChatMessage extends React.Component {
             message = message.replace(/\(vomit\)/g, '<img class="smile" src="images/smiles/30.gif"/>');
             message = message.replace(/\(devil\)/g, '<img class="smile" src="images/smiles/31.gif"/>');
             message = message.replace(/\(angel\)/g, '<img class="smile" src="images/smiles/32.gif"/>');
-            message = message.replace(/(\w{1,10}:\/\/[-a-zA-Z0-9@:%._\+~#=]{2,256}\.[a-z]{2,6}\b[-a-zA-Z0-9@:%_\+.~#?&//=]*)/g, '<a target="_blank" rel="noopener noreferrer" href="$1">$1</a>');
         }
         return message;
     }
@@ -43,6 +44,10 @@ export default class ChatMessage extends React.Component {
                     (ChatMessage.isMultiline(this.props.message.message) ? " chat-msg-multiline" : "")
                 }><span className="chat-msg-text" dangerouslySetInnerHTML={{__html: ChatMessage.processMessage(this.props.message.message)}}/></div>
             </div>;
+    }
+
+    static thumbnailClick(e) {
+        return "";
     }
 }
 

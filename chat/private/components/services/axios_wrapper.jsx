@@ -67,4 +67,8 @@ export default class AxiosWrapper {
     post(url, config) {
         return this.catchErrors(this.axios.post(url, config));
     }
+
+    post(url, data, config) {
+        return this.catchErrors(this.axios.post(url, data, config));
+    }
 }

@@ -138,7 +138,7 @@ body {
     overflow: auto;
     padding: 3pt;
     height: 10%;
-    min-height: 10%;
+    min-height: 4em;
     outline: none;
     margin: 0 7pt;
     background: none;
@@ -199,13 +199,15 @@ body {
 .chat-typing-area {
     margin: 0 0.5em;
     overflow: hidden;
-    min-height: 1em;
+    min-height: 1.5em;
+    display: inline-block;
 }
 
 .chat-typing-text {
     color: rgb(240,240,240);
     font-style: italic;
     font-size: small;
+    line-height: 1.85em;
 }
 
 .hidden {
@@ -336,4 +338,33 @@ body {
 .smile {
     vertical-align: middle;
     height: 2em;
+}
+
+.thumbnail {
+    vertical-align: middle;
+}
+
+.chat-panel {
+    min-height: 1.5em;
+    border-top: 1px solid black;
+    border-bottom: 1px solid black;
+    margin: 0.1em 0;
+    display: flex;
+}
+
+.chat-panel-menu {
+    margin-left: auto;
+    padding-right: 0.3em;
+}
+
+.panel-awesome-default {
+    font-size: 1.5em;
+    color: black;
+    vertical-align: middle;
+    padding: 0 0.2em;
+    border-left: 1px solid black;
+}
+
+.panel-awesome-default:hover {
+    color: silver;
 }

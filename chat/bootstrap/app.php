@@ -27,6 +27,18 @@ $app = new Laravel\Lumen\Application(
 
  $app->withEloquent();
 
+    config([
+        "filesystems" => [
+            'default' => 'local',
+            'disks' => [
+                'local' => [
+                    'driver' => 'local',
+                    'root' => '.',
+                ],
+            ],
+        ],
+    ]);
+
 /*
 |--------------------------------------------------------------------------
 | Register Container Bindings
@@ -71,6 +83,13 @@ $app->singleton(
 $app->singleton(
     \App\Contracts\PresenceService::class,
     \App\Services\PresenceServiceImpl::class
+);
+
+$app->singleton(
+    Illuminate\Contracts\Filesystem\Factory::class,
+    function($app) {
+        return new \Illuminate\Filesystem\FilesystemManager($app);
+    }
 );
 
 /*

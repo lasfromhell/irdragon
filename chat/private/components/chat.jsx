@@ -463,6 +463,56 @@ export default class Chat extends React.Component {
             Chat.toTwoDigits(date.getHours()) + ":" + Chat.toTwoDigits(date.getMinutes()) + ":" + Chat.toTwoDigits(date.getSeconds());
     }
 
+    onInputDrop(e) {
+        if (e.dataTransfer && e.dataTransfer.files) {
+            e.preventDefault();
+            this.uploadImages(e.dataTransfer.files);
+        }
+    }
+
+    uploadImages(files) {
+        for (let i = 0; i < files.length; i++) {
+            const file = files[i];
+            if (this.checkFile(file)) {
+                this.chatProxy.uploadFile(file, (e) => {
+                    console.log(e);
+                })
+                    .then((response) => {
+                        if (response.data) {
+                            this.refs.chatInput.value += ` {img:${response.data.id}} `;
+                        }
+                    }).catch(e => {
+                    alert("Unable to upload file " + file.name);
+                })
+
+            }
+        }
+    }
+
+    checkFile(file) {
+        if (file.size > 10485760) {
+            alert("File " + file.name + " size should be less than 10MB");
+            return false;
+        }
+        if (!file.type.startsWith('image')) {
+            alert("File " + file.name + " has wrong type");
+            return false;
+        }
+        return true;
+    }
+
+    onInputPaste(e) {
+        if (e.clipboardData && e.clipboardData.files) {
+            this.uploadImages(e.clipboardData.files);
+        }
+    }
+
+    onInputImageSelected(e) {
+        if (e.target.files) {
+            this.uploadImages(e.target.files);
+        }
+    }
+
     render() {
         return <div className={"chat-box" + (this.state.serverError ? " chat-box-error" : "")} ref="chatBox">
             <ChatMenu onLogout={this.onLogout.bind(this)} chatProxy={this.chatProxy} headerMessage={this.state.headerMessage} observables={this.observables} control={this.control}/>
@@ -470,9 +520,17 @@ export default class Chat extends React.Component {
                 {this.state.messages.map((value, key) => <ChatMessage id={'cm_' + key} key={key} message={value} userData={this.props.userData}/>)}
                 {this.state.proposedMessages.map((value, key) => <ChatMessage id={'propcm_' + key} key={key} message={value} userData={this.props.userData}/>)}
             </div>
-            <div className="chat-typing-area" ref="typingArea"><span className="chat-typing-text" ref="typingText"/></div>
-            <div className="chat-line"/>
-            <textarea className="chat-input" ref="chatInput" onKeyPress={this.handleInputKeyPress.bind(this) }/>
+            <div className="chat-panel">
+                <div className="chat-typing-area" ref="typingArea"><span className="chat-typing-text" ref="typingText"/></div>
+                <div className="chat-panel-menu">
+                    <label htmlFor="imageInput">
+                        <i className={"panel-awesome-default far fa-image"}/>
+                    </label>
+                    <input type="file" accept="image/*" id="imageInput" ref="imageUploadInput" className="hidden" onChange={this.onInputImageSelected.bind(this)}/>
+                    <i className={"panel-awesome-default far fa-smile"} />
+                </div>
+            </div>
+            <textarea className="chat-input" ref="chatInput" onKeyPress={this.handleInputKeyPress.bind(this) } onDrop={this.onInputDrop.bind(this)} onPaste={this.onInputPaste.bind(this)}/>
         </div>;
     }
 }

@@ -17,6 +17,7 @@ use App\Http\Models\MessageData;
 use App\DB\Message;
 use App\Http\Models\TypingData;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Log;
 
 class MessageServiceImpl implements MessageService
 {
@@ -158,7 +159,8 @@ class MessageServiceImpl implements MessageService
     public function toMessageBlockData($messages, $chatId, $userId) {
         $messageBlockData = new MessageBlockData();
         $messageBlockData->messages = $messages;
-        $messageBlockData->typing = $this->cacheService->get($this->constructTypingKey($chatId));
+        $typingKey = $this->constructTypingKey($chatId);
+        $messageBlockData->typing = $this->cacheService->get($typingKey);
         $messageBlockData->last_read_message = UserChatACL::where('chat_id', $chatId)->where('user_id', $userId)->first()->last_read_message;
         return $messageBlockData;
     }
