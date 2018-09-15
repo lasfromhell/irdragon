@@ -8,7 +8,7 @@ use Illuminate\Database\Eloquent\Model;
 
 class Message extends Model {
     protected $fillable = [
-        'data', 'from', 'from_date', 'read', 'chat_id', 'fake', 'private'
+        'data', 'from', 'from_date', 'read', 'chat_id', 'fake', 'private', 'device'
     ];
 
     protected $table = 'message';

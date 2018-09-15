@@ -10,6 +10,7 @@
         "laravel/lumen-framework": "5.6.*",
         "league/flysystem": "^1.0",
         "malkusch/lock": "^1.4",
+        "mobiledetect/mobiledetectlib": "^2.8",
         "php-ds/php-ds": "^1.2",
         "phpfastcache/phpfastcache": "^7.0",
         "vlucas/phpdotenv": "~2.2"

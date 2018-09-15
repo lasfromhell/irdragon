@@ -5,6 +5,7 @@ namespace App\Http\Middleware;
 use App\Contracts\PresenceService;
 use App\Contracts\SessionService;
 use App\Services\ResponseUtils;
+use App\Services\Utils;
 use Closure;
 
 class Authorize
@@ -36,7 +37,7 @@ class Authorize
         if (isset($token)) {
             $userData = $this->sessionService->fetchData($token);
             if (isset($userData)) {
-                $this->presenceService->updateOnlineDate($userData->id, $userData->displayName);
+                $this->presenceService->updateOnlineDate($userData->id, $userData->displayName, Utils::detectDeviceType($request->userAgent()));
                 $this->sessionService->updateTTL($token);
                 $request->merge(['user' => $userData ]);
                 $request->setUserResolver(function () use ($userData) {
@@ -44,12 +45,6 @@ class Authorize
                 });
                 return $next($request);
             }
-            else {
-                $userData = $this->sessionService->fetchData($token);
-            }
-        }
-        else {
-            $a = 1;
         }
         return ResponseUtils::buildUnauthorized();
     }

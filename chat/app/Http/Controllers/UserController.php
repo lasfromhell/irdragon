@@ -13,6 +13,7 @@ use App\Contracts\SessionService;
 use App\Contracts\UserService;
 use App\Http\Models\UserData;
 use App\Services\ResponseUtils;
+use App\Services\Utils;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Validation\ValidationException;
@@ -93,6 +94,6 @@ class UserController extends Controller
 
     public function userAction(Request $request) {
         $userData = $request->user();
-        $this->presenceService->updateActionDate($userData->id, $userData->displayName);
+        $this->presenceService->updateActionDate($userData->id, $userData->displayName, Utils::detectDeviceType($request->userAgent()));
     }
 }

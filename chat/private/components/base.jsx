@@ -2,6 +2,7 @@ import React from 'react';
 import Login from './login';
 import Chat from './chat';
 import ChatProxy from './services/chat_proxy'
+import MobileDetect from 'mobile-detect'
 
 export default class Base extends React.Component {
     constructor(props) {
@@ -16,11 +17,34 @@ export default class Base extends React.Component {
         this.chatProxy = new ChatProxy();
         this.checkAuthentication();
         this.lastActivity = 0;
+        this.detectMobile();
 
         document.addEventListener('keypress', this.onKeyPress.bind(this));
         document.addEventListener('mousemove', this.onMouseMove.bind(this));
         window.addEventListener('focus', this.onFocus.bind(this));
         setInterval(this.updateActivityByTimer.bind(this) ,3000)
+    }
+
+    detectMobile() {
+        const mobileDetect = new MobileDetect(window.navigator.userAgent);
+        this.deviceType = 'desktop';
+        if (mobileDetect.os() === 'AndroidOS') {
+            this.deviceType = 'android';
+        }
+        else if (mobileDetect.os() === 'iOS') {
+            if (mobileDetect.phone() === 'iPhone') {
+                this.deviceType = 'iphone';
+            }
+            else if (mobileDetect.tablet() === 'iPad') {
+                this.deviceType = 'ipad';
+            }
+        }
+        else if (mobileDetect.mobile()) {
+            this.deviceType = 'mobile';
+        }
+        else if (mobileDetect.tablet()) {
+            this.deviceType = 'tablet';
+        }
     }
 
     updateActivityByTimer() {
@@ -58,6 +82,7 @@ export default class Base extends React.Component {
         }
         const currentActivity = new Date().getTime();
         if (currentActivity - this.lastActivity > 5000) {
+
             this.chatProxy.sendAction();
             this.lastActivity = currentActivity;
         }

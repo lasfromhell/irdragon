@@ -29,16 +29,16 @@ class PresenceServiceImpl implements PresenceService
         $this->LATEST_TTL = new DateInterval("P14D");
     }
 
-    public function updateOnlineDate($userId, $displayName) {
-        $this->cacheService->set(self::PRESENCE . $userId, new PresenceItem(Carbon::now()->timestamp, $displayName), $this->LATEST_TTL);
+    public function updateOnlineDate($userId, $displayName, $device) {
+        $this->cacheService->set(self::PRESENCE . $userId, new PresenceItem(Carbon::now()->timestamp, $displayName, $device), $this->LATEST_TTL);
     }
 
     public function getOnlineDate($userId) {
         return $this->cacheService->get(self::PRESENCE . $userId);
     }
 
-    public function updateActionDate($userId, $displayName) {
-        $this->cacheService->set(self::PRESENCE_ACTION . $userId, new PresenceItem(Carbon::now()->timestamp, $displayName), $this->LATEST_TTL);
+    public function updateActionDate($userId, $displayName, $device) {
+        $this->cacheService->set(self::PRESENCE_ACTION . $userId, new PresenceItem(Carbon::now()->timestamp, $displayName, $device), $this->LATEST_TTL);
     }
 
     public function getActionDate($userId) {

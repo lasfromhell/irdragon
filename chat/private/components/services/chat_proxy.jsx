@@ -79,11 +79,23 @@ export default class ChatProxy {
         return this.axios.post(`/api/user/action`);
     }
 
-    uploadFile(file, onProgress) {
+    uploadImage(file, onProgress) {
         const data = new FormData();
         data.append("image", file);
         data.append("name", file.name);
         return this.axios.post(`/api/image/upload`, data, {
+            header: {
+                'Content-Type': 'multipart/form-data'
+            },
+            onUploadProgress: onProgress
+        });
+    }
+
+    uploadFile(file, onProgress) {
+        const data = new FormData();
+        data.append("file", file);
+        data.append("name", file.name);
+        return this.axios.post(`/api/file/upload`, data, {
             header: {
                 'Content-Type': 'multipart/form-data'
             },

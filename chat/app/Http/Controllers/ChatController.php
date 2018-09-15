@@ -15,6 +15,7 @@ use App\Contracts\UserService;
 use App\Http\Models\PresenceData;
 use App\Http\Models\SendMessageData;
 use App\Services\ResponseUtils;
+use App\Services\Utils;
 use Illuminate\Http\Request;
 use Illuminate\Validation\ValidationException;
 
@@ -47,12 +48,13 @@ class ChatController extends Controller
             return ResponseUtils::buildAccessDenied();
         }
         $data = $request::capture()->json()->get('data');
+        $device = Utils::detectDeviceType($request->userAgent());
         try {
-            $messageId = $this->messageService->addMessage($data, $userData->id, $chatId);
+            $messageId = $this->messageService->addMessage($data, $userData->id, $chatId, $device);
         } catch (\Throwable $e) {
             return ResponseUtils::buildErrorResponse($e->getMessage(), 0, 404);
         }
-        return response()->json(new SendMessageData($messageId));
+        return response()->json(new SendMessageData($messageId, $device));
     }
 
     public function getLatestMessages(int $chatId, $number, Request $request) {

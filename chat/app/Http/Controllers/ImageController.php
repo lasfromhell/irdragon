@@ -10,6 +10,7 @@ namespace App\Http\Controllers;
 
 
 use App\Services\ResponseUtils;
+use App\Services\Utils;
 use Illuminate\Http\Request;
 use Illuminate\Validation\ValidationException;
 use Imagick;
@@ -29,7 +30,7 @@ class ImageController extends Controller {
             return ResponseUtils::buildErrorResponse('File is not valid', 0, 406);
         }
         $ext = $file->getClientOriginalExtension();
-        $guid = $this->generateGuid();
+        $guid = Utils::generateGuid();
         $path = './chat/images/uploaded/';
         $filename = $guid . '.' . $ext;
         $file->storeAs($path, $filename);
@@ -42,14 +43,5 @@ class ImageController extends Controller {
         $imagick->setImageFormat('png');
         $imagick->thumbnailImage(128, 128, true, false);
         file_put_contents($dstPath, $imagick);
-    }
-
-    private function generateGuid() {
-        if (function_exists('com_create_guid') === true)
-        {
-            return trim(com_create_guid(), '{}');
-        }
-        return  bin2hex(openssl_random_pseudo_bytes(4)) . '-' . bin2hex(openssl_random_pseudo_bytes(2)) . '-' . bin2hex(openssl_random_pseudo_bytes(2)) .
-            '-' . bin2hex(openssl_random_pseudo_bytes(2)) . '-' . bin2hex(openssl_random_pseudo_bytes(6));
     }
 }

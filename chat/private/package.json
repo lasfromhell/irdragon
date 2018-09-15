@@ -8,6 +8,7 @@
     "collections": "^5.1.5",
     "gulp": "^3.9.1",
     "gulp-util": "^3.0.8",
+    "mobile-detect": "^1.4.3",
     "moment": "^2.22.2",
     "react": "^16.4.1",
     "react-dom": "^16.4.1",

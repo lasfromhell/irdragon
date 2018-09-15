@@ -23,6 +23,8 @@ gulp.task('watch', ['build'], function() {
         .on('error', swallowError);
     gulp.watch('components/services/*.jsx', ['build'])
         .on('error', swallowError);
+    gulp.watch('components/utils/*.jsx', ['build'])
+        .on('error', swallowError);
 });
 
 gulp.task('default', ['watch']);

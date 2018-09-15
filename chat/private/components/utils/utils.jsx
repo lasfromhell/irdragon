@@ -5,7 +5,7 @@ export default class Utils {
             message = message.replace('`', '');
         }
         else {
-            message = message.replace(/{file:([a-f0-9-]+);name:(.*)}/g, '<a href="files/uploaded/$1/$2" download>$2</a>');
+            message = message.replace(/{file:([a-f0-9-]+);name:(.*?)}/g, '<a href="files/uploaded/$1/$2" download>$2</a>');
             message = message.replace(/{img:([a-f0-9-]+\.[a-z]{3,4})}/g, '<a href="images/uploaded/$1" target="_blank"><img class="thumbnail" src="images/uploaded/thumbnails/$1"/></a>');
             message = message.replace(/(\w{1,10}:\/\/[-a-zA-Z0-9@:%._\+~#=]{2,256}\.[a-z]{2,6}\b[-a-zA-Z0-9@:;%_\+.~#?&//=]*)/g, '<a target="_blank" rel="noopener noreferrer" href="$1">$1</a>');
             message = message.replace(/(:D)|(:=D)|(:-D)|(:d)|(:=d)|(:-d)/g, '<img class="smile" src="images/smiles/01.gif"/>');

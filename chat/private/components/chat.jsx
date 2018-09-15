@@ -2,7 +2,9 @@ import React from 'react';
 import ChatMessage from "./chat_message";
 import SortedMap from 'collections/sorted-map'
 import ChatMenu from "./chat_menu";
-import {Observable, Subject, BehaviorSubject} from 'rxjs';
+import {BehaviorSubject} from 'rxjs';
+import Utils from "./utils/utils";
+
 const uuidv1 = require('uuid/v1');
 
 const TYPING_OFFSET_MS = 3000;
@@ -49,6 +51,12 @@ export default class Chat extends React.Component {
             fullScreen: this.onFullScreen.bind(this)
         };
         this.scrolledToBottom = true;
+        this.messageText = '';
+        this.messageTextPreviousPosition = {
+            start: 0,
+            end: 0
+        };
+        this.lastActiveDate = 0;
 
         this.loadChatSize();
 
@@ -179,6 +187,10 @@ export default class Chat extends React.Component {
                         if (response.data.hasOwnProperty(line)) {
                             if (response.data[line] != null) {
                                 const presenceItem = response.data[line];
+                                if (presenceItem.action && this.lastActiveDate < presenceItem.action.activityDate &&
+                                    presenceItem.action.displayName !== this.props.userData.displayName) {
+                                    this.lastActiveDate = presenceItem.action.activityDate;
+                                }
                                 console.info(`Action: ${Chat.presenceItemToString(presenceItem.action)}` +
                                     `; Online: ${Chat.presenceItemToString(presenceItem.online)}`);
                             }
@@ -209,7 +221,7 @@ export default class Chat extends React.Component {
             else {
                 const selStart = this.refs.chatInput.selectionStart;
                 const lastStrPart = this.refs.chatInput.value.substr(selStart);
-                this.refs.chatInput.value = this.refs.chatInput.value.substr(0, selStart) + "\n" + lastStrPart
+                this.refs.chatInput.value = this.refs.chatInput.value.substr(0, selStart) + "\n" + lastStrPart;
                 this.refs.chatInput.selectionStart = selStart + 1;
                 this.refs.chatInput.selectionEnd = selStart + 1;
                 if (lastStrPart.indexOf('\n') === -1) {
@@ -283,6 +295,7 @@ export default class Chat extends React.Component {
                 if (response.data.messageId && message) {
                     message.clientSent = false;
                     message.id = response.data.messageId;
+                    message.device = response.data.device;
                     this.updateStateByNewMessages([message]);
                 }
             } catch (e) {
@@ -466,15 +479,26 @@ export default class Chat extends React.Component {
     onInputDrop(e) {
         if (e.dataTransfer && e.dataTransfer.files) {
             e.preventDefault();
-            this.uploadImages(e.dataTransfer.files);
+            const images = [], others = [];
+            for (let i = 0; i < e.dataTransfer.files.length; i++) {
+                let file = e.dataTransfer.files[i];
+                if (Chat.checkImageType(file, false)) {
+                    images.push(file)
+                }
+                else {
+                    others.push(file);
+                }
+            }
+            this.uploadImages(images);
+            this.uploadFiles(others);
         }
     }
 
     uploadImages(files) {
         for (let i = 0; i < files.length; i++) {
             const file = files[i];
-            if (this.checkFile(file)) {
-                this.chatProxy.uploadFile(file, (e) => {
+            if (Chat.checkImage(file)) {
+                this.chatProxy.uploadImage(file, (e) => {
                     console.log(e);
                 })
                     .then((response) => {
@@ -484,18 +508,49 @@ export default class Chat extends React.Component {
                     }).catch(e => {
                     alert("Unable to upload file " + file.name);
                 })
+            }
+        }
+    }
 
+    static checkImage(file) {
+        if (file.size > 20971520) {
+            alert("File " + file.name + " size should not be greater than 20MB");
+            return false;
+        }
+        return Chat.checkImageType(file, true);
+    }
+
+    static checkImageType(file, notify) {
+        if (!file.type.startsWith('image')) {
+            if (notify) {
+                alert("File " + file.name + " has wrong type");
+            }
+            return false;
+        }
+        return true;
+    }
+
+    uploadFiles(files) {
+        for (let i = 0; i < files.length; i++) {
+            const file = files[i];
+            if (this.checkFile(file)) {
+                this.chatProxy.uploadFile(file, (e) => {
+                    console.log(e);
+                })
+                    .then((response) => {
+                        if (response.data) {
+                            this.refs.chatInput.value += ` {file:${response.data.id};name:${file.name}} `;
+                        }
+                    }).catch(e => {
+                    alert("Unable to upload file " + file.name);
+                })
             }
         }
     }
 
     checkFile(file) {
-        if (file.size > 10485760) {
-            alert("File " + file.name + " size should be less than 10MB");
-            return false;
-        }
-        if (!file.type.startsWith('image')) {
-            alert("File " + file.name + " has wrong type");
+        if (file.size > 1073741824) {
+            alert("File " + file.name + " size should not be greater than 1 GB");
             return false;
         }
         return true;
@@ -513,12 +568,54 @@ export default class Chat extends React.Component {
         }
     }
 
+    onInputFileSelected(e) {
+        if (e.target.files) {
+            this.uploadFiles(e.target.files);
+        }
+    }
+
+    onScrollChatToBottom() {
+        Chat.scrollToBottom(this.refs.chatMessagesBox);
+    }
+
+    // onInputChange(e) {
+    //     const nativeEvent = e.nativeEvent;
+    //     var offset = Utils.getSelectionCharacterOffsetWithin(this.refs.chatInput);
+    //     if (nativeEvent.inputType === 'insertText') {
+    //         this.messageText = this.messageText.substr(0, this.messageTextPreviousPosition.start) + nativeEvent.data + this.messageText.substr(this.messageTextPreviousPosition.end + 1);
+    //     }
+    //     else if (nativeEvent.inputType === 'deleteContentBackward') {
+    //         this.messageText = this.messageText.substr(0, this.messageTextPreviousPosition.start) + this.messageText.substr(this.messageTextPreviousPosition.end + 1);
+    //     }
+    //     else {
+    //         return;
+    //     }
+    //     const processData = Utils.processMessage(this.messageText);
+    //     // this.refs.chatInput.innerHTML = ;
+    //     this.refs.chatInput.innerHTML = this.messageText;
+    //     Utils.setSelectionCharacterOffsetWithin(this.refs.chatInput, offset);
+    //     this.messageTextPreviousPosition = offset;
+    // }
+    //
+    // onInputMouseUp() {
+        // this.messageTextPreviousPosition = Utils.getSelectionCharacterOffsetWithin(this.refs.chatInput);
+    // }
+
+    // onInputChange(e) {
+    //     var offset = Utils.getSelectionCharacterOffsetWithin(this.refs.chatInput);
+    //     const len = this.refs.chatInput.innerText.length;
+    //     this.refs.chatInput.innerHTML = Utils.processMessage(this.refs.chatInput.innerHTML).message;
+    //     const diff = len - this.refs.chatInput.innerText.length;
+    //     Utils.setSelectionCharacterOffsetWithin(this.refs.chatInput, offset, diff);
+    // }
+
     render() {
         return <div className={"chat-box" + (this.state.serverError ? " chat-box-error" : "")} ref="chatBox">
             <ChatMenu onLogout={this.onLogout.bind(this)} chatProxy={this.chatProxy} headerMessage={this.state.headerMessage} observables={this.observables} control={this.control}/>
             <div className="chat-messages-box" ref="chatMessagesBox" onScroll={this.handleMessageBoxScroll.bind(this)} onWheel={this.handleWheel.bind(this)}>
-                {this.state.messages.map((value, key) => <ChatMessage id={'cm_' + key} key={key} message={value} userData={this.props.userData}/>)}
-                {this.state.proposedMessages.map((value, key) => <ChatMessage id={'propcm_' + key} key={key} message={value} userData={this.props.userData}/>)}
+                {this.state.messages.map((value, key) => <ChatMessage id={'cm_' + key} key={key} message={value} userData={this.props.userData} lastActiveDate={this.lastActiveDate}/>)}
+                {this.state.proposedMessages.map((value, key) => <ChatMessage id={'propcm_' + key} key={key} message={value} userData={this.props.userData} lastActiveDate={this.lastActiveDate}/>)}
+                {/*{<ChatMessage id='preview-message' message={this.refs.chatInput.value} userData={this.props.userData}/>}*/}
             </div>
             <div className="chat-panel">
                 <div className="chat-typing-area" ref="typingArea"><span className="chat-typing-text" ref="typingText"/></div>
@@ -526,10 +623,16 @@ export default class Chat extends React.Component {
                     <label htmlFor="imageInput">
                         <i className={"panel-awesome-default far fa-image"}/>
                     </label>
-                    <input type="file" accept="image/*" id="imageInput" ref="imageUploadInput" className="hidden" onChange={this.onInputImageSelected.bind(this)}/>
+                    <input type="file" accept="image/*" id="imageInput" ref="imageUploadInput" className="hidden" multiple onChange={this.onInputImageSelected.bind(this)}/>
+                    <label htmlFor="fileInput">
+                        <i className={"panel-awesome-default far fa-file"}/>
+                    </label>
+                    <input type="file" id="fileInput" ref="fileUploadInput" className="hidden" multiple onChange={this.onInputFileSelected.bind(this)}/>
                     <i className={"panel-awesome-default far fa-smile"} />
+                    <i className={"panel-awesome-default far fa-chevron-double-down"} onClick={this.onScrollChatToBottom.bind(this)} />
                 </div>
             </div>
+            {/*<div className="chat-input" ref="chatInput" onKeyPress={this.handleInputKeyPress.bind(this) } onMouseUp={this.onInputMouseUp.bind(this)} onDrop={this.onInputDrop.bind(this)} onPaste={this.onInputPaste.bind(this)} onInput={this.onInputChange.bind(this)}/>*/}
             <textarea className="chat-input" ref="chatInput" onKeyPress={this.handleInputKeyPress.bind(this) } onDrop={this.onInputDrop.bind(this)} onPaste={this.onInputPaste.bind(this)}/>
         </div>;
     }

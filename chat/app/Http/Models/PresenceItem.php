@@ -13,16 +13,19 @@ class PresenceItem
 {
     public $activityDate;
     public $displayName;
+    public $device;
 
     /**
      * PresenceData constructor.
      * @param $activityDate
      * @param $displayName
+     * @param $device
      */
-    public function __construct($activityDate, $displayName)
+    public function __construct($activityDate, $displayName, $device)
     {
         $this->activityDate = $activityDate;
         $this->displayName = $displayName;
+        $this->device = $device;
     }
 
 

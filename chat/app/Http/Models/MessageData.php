@@ -16,4 +16,5 @@ class MessageData
     public $message;
     public $date;
     public $id;
+    public $device;
 }

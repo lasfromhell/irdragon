@@ -16,7 +16,7 @@ interface MessageService
 //    public function getLatestMessages($chatId, $messagesCount);
 //    public function getMessagesAfter($chatId, $iidAfter);
 //    public function getMessage($chatId, $iid);
-    public function addMessage($data, $userId, $chatId);
+    public function addMessage($data, $userId, $chatId, $device);
     public function getLastMessagesBeforeDB($chatId, $userId, $initId, $limit = 10);
 
     public function typingStarted($userId, $chatId);

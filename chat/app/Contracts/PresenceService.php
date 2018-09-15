@@ -11,8 +11,8 @@ namespace App\Contracts;
 
 interface PresenceService
 {
-    public function updateOnlineDate($userId, $displayName);
+    public function updateOnlineDate($userId, $displayName, $device);
     public function getOnlineDate($userId);
-    public function updateActionDate($userId, $displayName);
+    public function updateActionDate($userId, $displayName, $device);
     public function getActionDate($userId);
 }

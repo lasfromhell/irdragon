@@ -58,7 +58,6 @@ body {
 }
 
 .chat-msg-text {
-	font-weight: 400;
 }
 
 .chat-time {
@@ -320,7 +319,7 @@ body {
 }
 
 .presence-status-online {
-    background: lightgreen;
+    background: lawngreen;
 }
 
 .presence-status-offline {
@@ -331,8 +330,21 @@ body {
     background: yellow;
 }
 
+.presence-text-online {
+    color: lawngreen;
+}
+
+.presence-text-offline {
+    color: indianred;
+}
+
+.presence-text-away {
+    color: yellow;
+}
+
 .presence-date {
     margin-left: 0.3em;
+    font-weight: bold;
 }
 
 .smile {
@@ -342,6 +354,7 @@ body {
 
 .thumbnail {
     vertical-align: middle;
+    border: solid 1px black;
 }
 
 .chat-panel {
@@ -367,4 +380,35 @@ body {
 
 .panel-awesome-default:hover {
     color: silver;
+}
+
+.presence-device {
+    margin-left: 0.3em;
+    width: 1.4em;
+    overflow-x: hidden;
+    text-align: center;
+}
+
+.chat-msg-text a, .chat-msg-text a:visited {
+    color: mediumblue;
+    text-decoration: none;
+    text-shadow: 0 0 0.1em rgba(255,0,0,0.2);
+}
+
+.chat-msg-text a:hover {
+    text-decoration: underline;
+}
+
+.chat-msg-text a:active {
+    color: darkmagenta;
+}
+
+.message-device {
+    display: inline;
+    color: rgba(100,120,130,1);
+    font-size: 0.9em;
+}
+
+.chat-msg-unread {
+    font-weight: bold;
 }

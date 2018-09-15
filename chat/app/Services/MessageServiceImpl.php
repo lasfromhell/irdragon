@@ -51,10 +51,10 @@ class MessageServiceImpl implements MessageService
             ->map([$this, 'toMessageData'])->values()->toArray(), $chatId, $userId);
     }
 
-    public function addMessage($data, $userId, $chatId) {
+    public function addMessage($data, $userId, $chatId, $device) {
         $message = new Message();
         $message->fill(['data' => $data, 'from' => $userId, 'from_date' => Carbon::now(),
-            'read' => false, 'chat_id' => $chatId, 'fake' => false, 'private' => true]);
+            'read' => false, 'chat_id' => $chatId, 'fake' => false, 'private' => true, 'device' => $device]);
         $message->saveOrFail();
         return $message->id;
     }
@@ -137,6 +137,7 @@ class MessageServiceImpl implements MessageService
         $messageData->date = $message->from_date->timestamp;
         $messageData->id = $message->id;
         $messageData->fromId = $message->from;
+        $messageData->device = $message->device;
         return $messageData;
     }
 //
