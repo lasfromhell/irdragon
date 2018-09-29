@@ -376,6 +376,12 @@ body {
     vertical-align: middle;
     padding: 0 0.2em;
     border-left: 1px solid black;
+    width: 1em;
+    text-align: center;
+}
+
+.panel-awesome-selected {
+    color: silver;
 }
 
 .panel-awesome-default:hover {
@@ -411,4 +417,36 @@ body {
 
 .chat-msg-unread {
     font-weight: bold;
+}
+
+.smiles-box-wrapper {
+    position: relative;
+    display: inline-block;
+}
+
+.smiles-box {
+    position: absolute;
+    left: -7.3em;
+    bottom: 1em;
+    border: solid black 0.05em;
+    background: rgb(155,181,203);
+}
+
+.smiles-box ul {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+}
+
+.smiles-box ul li {
+    width: 2em;
+    height: 2em;
+    padding: 0.2em;
+    border: 0.01em solid black;
+}
+
+.smiles-box ul li:hover {
+    background: rgba(0,0,0,0.1);
+    cursor: pointer;
 }

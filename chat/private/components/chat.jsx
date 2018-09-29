@@ -3,7 +3,7 @@ import ChatMessage from "./chat_message";
 import SortedMap from 'collections/sorted-map'
 import ChatMenu from "./chat_menu";
 import {BehaviorSubject} from 'rxjs';
-import Utils from "./utils/utils";
+import Log from "./log_service";
 
 const uuidv1 = require('uuid/v1');
 
@@ -14,12 +14,14 @@ export default class Chat extends React.Component {
 
     constructor(props) {
         super(props);
+        this.log = props.log;
         this.state = {
             messages: new SortedMap(),
             proposedMessages: new SortedMap(),
             data: '',
             serverError: false,
-            headerMessage: ''
+            headerMessage: '',
+            smilesDisplayed: false
         };
         this.chatId = this.props.userData.chats[0];
 
@@ -92,6 +94,7 @@ export default class Chat extends React.Component {
             })
             .catch((e) => {
                 console.log(e);
+                setTimeout(this.startMessagesGathering.bind(this), 1000);
             });
     }
 
@@ -482,7 +485,7 @@ export default class Chat extends React.Component {
             const images = [], others = [];
             for (let i = 0; i < e.dataTransfer.files.length; i++) {
                 let file = e.dataTransfer.files[i];
-                if (Chat.checkImageType(file, false)) {
+                if (this.checkImageType(file, false)) {
                     images.push(file)
                 }
                 else {
@@ -495,32 +498,41 @@ export default class Chat extends React.Component {
     }
 
     uploadImages(files) {
+        this.log.debug('Files number = ' + files.length);
         for (let i = 0; i < files.length; i++) {
             const file = files[i];
-            if (Chat.checkImage(file)) {
+            this.log.debug(`Handling file ${i} - ${file.name}`);
+            if (this.checkImage(file)) {
+                this.log.debug(`Uploading file ${file.name}`);
                 this.chatProxy.uploadImage(file, (e) => {
+                    this.log.debug(`Uploading ${file.name} - ${e.loaded} of ${e.total}...`);
                     console.log(e);
                 })
                     .then((response) => {
+                        this.log.debug(`File ${file.name} upload response received - ${JSON.stringify(response.data)}...`);
                         if (response.data) {
+                            this.log.debug(`Pushing file ${file.name} link ${response.data.id} to chat...`);
                             this.refs.chatInput.value += ` {img:${response.data.id}} `;
                         }
                     }).catch(e => {
-                    alert("Unable to upload file " + file.name);
+                        this.log.debug(`Unable to push file ${file.name}. ${e.message}`);
+                        alert("Unable to upload file " + file.name);
                 })
             }
         }
     }
 
-    static checkImage(file) {
+    checkImage(file) {
+        this.log.debug(`Checking file ${file.name} size - ${file.size}`);
         if (file.size > 20971520) {
             alert("File " + file.name + " size should not be greater than 20MB");
             return false;
         }
-        return Chat.checkImageType(file, true);
+        return this.checkImageType(file, true);
     }
 
-    static checkImageType(file, notify) {
+    checkImageType(file, notify) {
+        this.log.debug(`Checking file ${file.name} type - ${file.type}`);
         if (!file.type.startsWith('image')) {
             if (notify) {
                 alert("File " + file.name + " has wrong type");
@@ -563,7 +575,9 @@ export default class Chat extends React.Component {
     }
 
     onInputImageSelected(e) {
+        this.log.debug('Image was selected');
         if (e.target.files) {
+            this.log.debug('Image contains target files ' + e.target.files);
             this.uploadImages(e.target.files);
         }
     }
@@ -576,6 +590,35 @@ export default class Chat extends React.Component {
 
     onScrollChatToBottom() {
         Chat.scrollToBottom(this.refs.chatMessagesBox);
+    }
+
+    onSmilesClick() {
+        this.setState({
+            smilesDisplayed: !this.state.smilesDisplayed
+        });
+    }
+
+    onSmileClick(data) {
+        this.appendToCurrentInputPos(data);
+        this.onSmilesClick();
+        this.refs.chatInput.focus();
+    }
+
+    appendToCurrentInputPos(data) {
+        let offset = this.refs.chatInput.selectionEnd;
+        if (offset === 0) {
+            this.refs.chatInput.value = data + ' ';
+            offset += data.length + 1;
+        }
+        else {
+            this.refs.chatInput.value = this.refs.chatInput.value.substr(0, offset) + ' ' + data + ' ' + this.refs.chatInput.value.substr(offset);
+            offset += data.length + 2;
+        }
+        this.refs.chatInput.selectionStart = this.refs.chatInput.selectionEnd = offset;
+    }
+
+    onDownloadLogs() {
+        this.log.download();
     }
 
     // onInputChange(e) {
@@ -620,6 +663,7 @@ export default class Chat extends React.Component {
             <div className="chat-panel">
                 <div className="chat-typing-area" ref="typingArea"><span className="chat-typing-text" ref="typingText"/></div>
                 <div className="chat-panel-menu">
+                    <i className={"panel-awesome-default fas fa-notes-medical"} onClick={this.onDownloadLogs.bind(this)}/>
                     <label htmlFor="imageInput">
                         <i className={"panel-awesome-default far fa-image"}/>
                     </label>
@@ -628,7 +672,31 @@ export default class Chat extends React.Component {
                         <i className={"panel-awesome-default far fa-file"}/>
                     </label>
                     <input type="file" id="fileInput" ref="fileUploadInput" className="hidden" multiple onChange={this.onInputFileSelected.bind(this)}/>
-                    <i className={"panel-awesome-default far fa-smile"} />
+                    <i className={"panel-awesome-default far fa-smile " + (this.state.smilesDisplayed ? "panel-awesome-selected" : "")} onClick={this.onSmilesClick.bind(this)} />
+                    <div className={(this.state.smilesDisplayed ? "smiles-box-wrapper" : "hidden")}>
+                        <div className="smiles-box">
+                            <ul>
+                                <li><img className="smile" src="images/smiles/01.gif" onClick={() => this.onSmileClick(":D")}/></li>
+                                <li><img className="smile" src="images/smiles/02.gif" onClick={() => this.onSmileClick(":o")}/></li>
+                                <li><img className="smile" src="images/smiles/05.gif" onClick={() => this.onSmileClick("(love)")}/></li>
+                            </ul>
+                            <ul>
+                                <li><img className="smile" src="images/smiles/07.gif" onClick={() => this.onSmileClick(";)")}/></li>
+                                <li><img className="smile" src="images/smiles/08.gif" onClick={() => this.onSmileClick("(kiss)")}/></li>
+                                <li><img className="smile" src="images/smiles/09.gif" onClick={() => this.onSmileClick(":)")}/></li>
+                            </ul>
+                            <ul>
+                                <li><img className="smile" src="images/smiles/13.gif" onClick={() => this.onSmileClick(":(")}/></li>
+                                <li><img className="smile" src="images/smiles/16.gif" onClick={() => this.onSmileClick(":'(")}/></li>
+                                <li><img className="smile" src="images/smiles/28.gif" onClick={() => this.onSmileClick("(cool)")}/></li>
+                            </ul>
+                            <ul>
+                                <li><img className="smile" src="images/smiles/30.gif" onClick={() => this.onSmileClick("(vomit)")}/></li>
+                                <li><img className="smile" src="images/smiles/31.gif" onClick={() => this.onSmileClick("(devil)")}/></li>
+                                <li><img className="smile" src="images/smiles/32.gif" onClick={() => this.onSmileClick("(angel)")}/></li>
+                            </ul>
+                        </div>
+                    </div>
                     <i className={"panel-awesome-default far fa-chevron-double-down"} onClick={this.onScrollChatToBottom.bind(this)} />
                 </div>
             </div>

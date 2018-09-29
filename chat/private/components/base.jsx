@@ -3,10 +3,12 @@ import Login from './login';
 import Chat from './chat';
 import ChatProxy from './services/chat_proxy'
 import MobileDetect from 'mobile-detect'
+import Log from "./log_service";
 
 export default class Base extends React.Component {
     constructor(props) {
         super(props);
+        this.log = new Log();
         this.state = {
             isLoggedIn: false,
             isChecked: false,
@@ -133,7 +135,7 @@ export default class Base extends React.Component {
             <div className={this.state.siteVisible ? "" : "hidden"}>
                 {this.state.isChecked ? (
             this.state.isLoggedIn ?
-                <Chat userData={this.state.userData} updateTitleCB={this.updateTitle.bind(this)} onLogout={this.onLogout.bind(this)} chatProxy={this.chatProxy}/>
+                <Chat userData={this.state.userData} updateTitleCB={this.updateTitle.bind(this)} onLogout={this.onLogout.bind(this)} chatProxy={this.chatProxy} log={this.log}/>
                 : <Login authenticatedCB={this.authenticated} chatProxy={this.chatProxy}/>
             ) : <div/> }
             </div>
