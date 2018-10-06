@@ -19,4 +19,5 @@ interface CacheService
     public function touch($key, $ttl);
     public function exists($key);
     public function delete($key);
+    public function dmutex_file($token);
 }

@@ -102,4 +102,29 @@ export default class ChatProxy {
             onUploadProgress: onProgress
         });
     }
+
+    makeCall(chatId, dst, offer) {
+        return this.axios.post(`/api/chat/${chatId}/rtc/call`, {
+            target: dst,
+            sdp: offer.sdp,
+            type: offer.type
+        });
+    }
+
+    addCandidate(chatId, callId, candidate) {
+        return this.axios.post(`/api/chat/${chatId}/rtc/candidate`, {
+            callId: callId,
+            candidate: candidate.candidate,
+            sdpMid: candidate.sdpMid,
+            sdpMLineIndex: candidate.sdpMLineIndex
+        });
+    }
+
+    answerCall(chatId, callId, answer) {
+        return this.axios.post(`/api/chat/${chatId}/rtc/answer`, {
+            callId: callId,
+            sdp: answer.sdp,
+            type: answer.type
+        });
+    }
 }

@@ -3,7 +3,12 @@ import ChatMessage from "./chat_message";
 import SortedMap from 'collections/sorted-map'
 import ChatMenu from "./chat_menu";
 import {BehaviorSubject} from 'rxjs';
-import Log from "./log_service";
+import CallService, {
+    CALL_STATE_CALLING,
+    CALL_STATE_CALLING_ANSWER,
+    CALL_STATE_CONNECTED,
+    CALL_STATE_INCOMING, CALL_STATE_INCOMING_CALLING
+} from "./services/call_service";
 
 const uuidv1 = require('uuid/v1');
 
@@ -64,11 +69,47 @@ export default class Chat extends React.Component {
 
         this.startMessagesGathering();
         this.startPresenceGathering();
+        this.initializeCallService();
 
         window.addEventListener('focus', this.onWindowActive.bind(this));
         window.addEventListener('resize', this.onWindowResize.bind(this));
         if (document.hasFocus()) {
             this.onWindowActive();
+        }
+    }
+
+    initializeCallService() {
+        this.callService = new CallService(this.log, this.chatProxy, this.chatId);
+        this.callService.onNewTrack = (track, earpiece) => {
+            if (this.refs.remoteVideo.srcObject) {
+                this.log.debug(`Adding track ${JSON.stringify(track)}`);
+                this.refs.remoteVideo.srcObject.addTrack(track);
+            }
+            else {
+                const mediaStream = new MediaStream();
+                this.log.debug(`Current sink id is ${this.refs.remoteVideo.sinkId}`);
+                // this.log.debug(`Creating new media stream with first track ${JSON.stringify(track)}. Earpiece: ${earpiece}`);
+                // if (earpiece) {
+                //     this.log.debug(`Earpiece found. Setting sink id ${earpiece.deviceId}`);
+                //     try {
+                //         this.refs.remoteVideo.setSinkId(earpiece.deviceId)
+                //             .then(() => {
+                //                 this.log.debug(`Sink attached ${earpiece.deviceId}`);
+                //             }).catch(e => {
+                //             this.log.error(`Unable to attach sink ${earpiece.deviceId}`);
+                //         });
+                //     } catch (e) {
+                //         this.log.error(`Setting sink id failed ${e.message}`);
+                //     }
+                // }
+                mediaStream.addTrack(track);
+                this.refs.remoteVideo.srcObject = mediaStream;
+            }
+        };
+        this.callService.onCallStateChanged = (newState) => {
+            this.setState({
+                callState: newState
+            });
         }
     }
 
@@ -110,14 +151,17 @@ export default class Chat extends React.Component {
                 this.setState({
                     headerMessage: 'Updated: ' + Chat.toTwoDigits(date.getHours()) + ":" + Chat.toTwoDigits(date.getMinutes()) + ":" + Chat.toTwoDigits(date.getSeconds())
                 });
-                this.updateTyping(response.data.typing);
-                if (response.data.messages && response.data.messages.length) {
-                    this.updateStateByNewMessages(response.data.messages, true, false, response.data.last_read_message);
+                const messagesBlock = response.data.messages;
+                this.updateTyping(messagesBlock.typing);
+                if (messagesBlock.messages && messagesBlock.messages.length) {
+                    this.updateStateByNewMessages(messagesBlock.messages, true, false, messagesBlock.last_read_message);
                 }
-                this.updateNewMessageCount(response.data.last_read_message);
+                this.updateNewMessageCount(messagesBlock.last_read_message);
                 if (document.hasFocus()) {
                     this.onWindowActive();
                 }
+                const communicationBlock = response.data.communications;
+                this.callService.setIncomingData(communicationBlock);
             })
             .catch(error => {
                 console.error('Unable to get latest messages', error);
@@ -185,7 +229,7 @@ export default class Chat extends React.Component {
                 return;
             }
             this.chatProxy.getPresence(this.chatId).then(response => {
-                    console.info('Presence received:');
+                    this.log.debug('Presence received:');
                     for (const line in response.data) {
                         if (response.data.hasOwnProperty(line)) {
                             if (response.data[line] != null) {
@@ -194,7 +238,7 @@ export default class Chat extends React.Component {
                                     presenceItem.action.displayName !== this.props.userData.displayName) {
                                     this.lastActiveDate = presenceItem.action.activityDate;
                                 }
-                                console.info(`Action: ${Chat.presenceItemToString(presenceItem.action)}` +
+                                this.log.debug(`Action: ${Chat.presenceItemToString(presenceItem.action)}` +
                                     `; Online: ${Chat.presenceItemToString(presenceItem.online)}`);
                             }
                         }
@@ -621,6 +665,29 @@ export default class Chat extends React.Component {
         this.log.download();
     }
 
+    onCallClick() {
+        if (this.callService.isNoneCallState()) {
+            const presence = this.presenceObservable.getValue();
+            let otherPartyFound = false;
+            for (let key in presence) {
+                const online = presence[key].online;
+                if (online) {
+                    if (online.displayName !== this.props.userData.displayName) {
+                        this.callService.setOtherParty(online.displayName);
+                        otherPartyFound = true;
+                        break;
+                    }
+                }
+            }
+            if (otherPartyFound) {
+                this.callService.callAction();
+            }
+        }
+        else {
+            this.callService.callAction();
+        }
+    }
+
     // onInputChange(e) {
     //     const nativeEvent = e.nativeEvent;
     //     var offset = Utils.getSelectionCharacterOffsetWithin(this.refs.chatInput);
@@ -652,6 +719,19 @@ export default class Chat extends React.Component {
     //     Utils.setSelectionCharacterOffsetWithin(this.refs.chatInput, offset, diff);
     // }
 
+    getCallStateClass() {
+        switch (this.state.callState) {
+            case CALL_STATE_CALLING:
+            case CALL_STATE_CALLING_ANSWER:
+            case CALL_STATE_CONNECTED:
+            case CALL_STATE_INCOMING_CALLING:
+                return " rtc_phone_cancel";
+            case CALL_STATE_INCOMING:
+                return " rtc_phone_incoming";
+        }
+        return "";
+    }
+
     render() {
         return <div className={"chat-box" + (this.state.serverError ? " chat-box-error" : "")} ref="chatBox">
             <ChatMenu onLogout={this.onLogout.bind(this)} chatProxy={this.chatProxy} headerMessage={this.state.headerMessage} observables={this.observables} control={this.control}/>
@@ -660,9 +740,11 @@ export default class Chat extends React.Component {
                 {this.state.proposedMessages.map((value, key) => <ChatMessage id={'propcm_' + key} key={key} message={value} userData={this.props.userData} lastActiveDate={this.lastActiveDate}/>)}
                 {/*{<ChatMessage id='preview-message' message={this.refs.chatInput.value} userData={this.props.userData}/>}*/}
             </div>
+            <audio ref="remoteVideo" autoPlay="autoPlay"></audio>
             <div className="chat-panel">
                 <div className="chat-typing-area" ref="typingArea"><span className="chat-typing-text" ref="typingText"/></div>
                 <div className="chat-panel-menu">
+                    <i className={"panel-awesome-default fas fa-phone" + this.getCallStateClass()} onClick={this.onCallClick.bind(this)}/>
                     <i className={"panel-awesome-default fas fa-notes-medical"} onClick={this.onDownloadLogs.bind(this)}/>
                     <label htmlFor="imageInput">
                         <i className={"panel-awesome-default far fa-image"}/>
@@ -702,6 +784,7 @@ export default class Chat extends React.Component {
             </div>
             {/*<div className="chat-input" ref="chatInput" onKeyPress={this.handleInputKeyPress.bind(this) } onMouseUp={this.onInputMouseUp.bind(this)} onDrop={this.onInputDrop.bind(this)} onPaste={this.onInputPaste.bind(this)} onInput={this.onInputChange.bind(this)}/>*/}
             <textarea className="chat-input" ref="chatInput" onKeyPress={this.handleInputKeyPress.bind(this) } onDrop={this.onInputDrop.bind(this)} onPaste={this.onInputPaste.bind(this)}/>
+
         </div>;
     }
 }

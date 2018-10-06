@@ -86,6 +86,11 @@ $app->singleton(
 );
 
 $app->singleton(
+    \App\Contracts\RTCService::class,
+    \App\Services\RTCServiceImpl::class
+);
+
+$app->singleton(
     Illuminate\Contracts\Filesystem\Factory::class,
     function($app) {
         return new \Illuminate\Filesystem\FilesystemManager($app);

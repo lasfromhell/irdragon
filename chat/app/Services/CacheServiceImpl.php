@@ -19,6 +19,8 @@ class CacheServiceImpl implements CacheService
 
     const TTL = 30;
 
+    const MUTEX_PATH = 'mutex/key_';
+
     public function __construct()
     {
         $this->cache = CacheManager::Files(new ConfigurationOption(['path' => realpath('.') . '/cache/']));
@@ -38,7 +40,7 @@ class CacheServiceImpl implements CacheService
 
     public function mutex($key)
     {
-        return new FlockMutex(fopen('mutex/key_' . $key, 'w+'));
+        return new FlockMutex(fopen(self::MUTEX_PATH . md5($key), 'w+'));
     }
 
     public function inc($key, $by = 1)
@@ -58,8 +60,6 @@ class CacheServiceImpl implements CacheService
     public function touch($key, $ttl)
     {
         $item = $this->cache->getItem($key);
-//        $dateTime = new DateTime();
-//        Log::info('Touch item for key ' . $key . ' : ' . json_decode($item->get()));
         $item->expiresAfter($ttl);
         $this->cache->save($item);
     }
@@ -71,5 +71,10 @@ class CacheServiceImpl implements CacheService
 
     public function delete($key) {
         $this->cache->deleteItem($key);
+    }
+
+    public function dmutex_file($key)
+    {
+        unlink(self::MUTEX_PATH . md5($key));
     }
 }

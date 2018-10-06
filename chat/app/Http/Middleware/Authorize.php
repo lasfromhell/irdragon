@@ -2,6 +2,7 @@
 
 namespace App\Http\Middleware;
 
+use App\Contracts\CacheService;
 use App\Contracts\PresenceService;
 use App\Contracts\SessionService;
 use App\Services\ResponseUtils;
@@ -12,11 +13,13 @@ class Authorize
 {
     protected $sessionService;
     protected $presenceService;
+    protected $cacheService;
 
-    public function __construct(SessionService $sessionService, PresenceService $presenceService)
+    public function __construct(SessionService $sessionService, PresenceService $presenceService, CacheService $cacheService)
     {
         $this->sessionService = $sessionService;
         $this->presenceService = $presenceService;
+        $this->cacheService = $cacheService;
     }
 
     /**
@@ -35,15 +38,23 @@ class Authorize
         $token = $token ?? $request->input('token');
         $token = $token ?? $request->cookie('token');
         if (isset($token)) {
-            $userData = $this->sessionService->fetchData($token);
-            if (isset($userData)) {
+            $userData = null;
+            $this->cacheService->mutex($token)->synchronized(function() use ($token, &$userData) {
+                $userData = $this->sessionService->fetchData($token);
+                if (isset($userData)) {
+                    $this->sessionService->updateTTL($token);
+                }
+            });
+            if ($userData) {
                 $this->presenceService->updateOnlineDate($userData->id, $userData->displayName, Utils::detectDeviceType($request->userAgent()));
-                $this->sessionService->updateTTL($token);
                 $request->merge(['user' => $userData ]);
                 $request->setUserResolver(function () use ($userData) {
                     return $userData;
                 });
                 return $next($request);
+            }
+            else {
+                $this->cacheService->dmutex_file($token);
             }
         }
         return ResponseUtils::buildUnauthorized();

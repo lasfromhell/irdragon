@@ -40,5 +40,8 @@ $router->group(['prefix' => 'api'], function () use ($router) {
         $router->post('user/action', 'UserController@userAction');
         $router->post('image/upload', 'ImageController@upload');
         $router->post('file/upload', 'FileController@upload');
+        $router->post('chat/{chatId}/rtc/call', 'ChatController@makeRtcCall');
+        $router->post('chat/{chatId}/rtc/candidate', 'ChatController@AddRtcCandidate');
+        $router->post('chat/{chatId}/rtc/answer', 'ChatController@answerRtcCall');
     });
 });

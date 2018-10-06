@@ -1,9 +1,11 @@
 import Axios from 'axios';
+import axiosRetry from 'axios-retry';
 
 export default class AxiosWrapper {
 
     constructor() {
         this.axios = Axios.create();
+        axiosRetry(this.axios, { retries: 3 });
         this.headers = {};
         this.unauthorizedAttempts = 5;
     }

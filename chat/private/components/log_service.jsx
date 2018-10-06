@@ -8,6 +8,17 @@ export default class Log {
 
     debug(message) {
         this.log('DEBUG', message);
+        console.debug(message);
+    }
+
+    info(message) {
+        this.log('INFO', message);
+        console.info(message);
+    }
+
+    error(message) {
+        this.log('ERROR', message);
+        console.error(message);
     }
 
     log(level, message) {

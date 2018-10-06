@@ -10,8 +10,10 @@ namespace App\Http\Controllers;
 
 use App\Contracts\MessageService;
 use App\Contracts\PresenceService;
+use App\Contracts\RTCService;
 use App\Contracts\SessionService;
 use App\Contracts\UserService;
+use App\Http\Models\CommunicationData;
 use App\Http\Models\PresenceData;
 use App\Http\Models\SendMessageData;
 use App\Services\ResponseUtils;
@@ -25,14 +27,16 @@ class ChatController extends Controller
     protected $messageService;
     protected $sessionService;
     protected $presenceService;
+    protected $rtcService;
 
     function __construct(UserService $userService, MessageService $messageService, SessionService $sessionService,
-                         PresenceService $presenceService)
+                         PresenceService $presenceService, RTCService $rtcService)
     {
         $this->userService = $userService;
         $this->messageService = $messageService;
         $this->sessionService = $sessionService;
         $this->presenceService = $presenceService;
+        $this->rtcService = $rtcService;
     }
 
     public function sendMessage(int $chatId, Request $request) {
@@ -70,7 +74,7 @@ class ChatController extends Controller
         if (!$this->checkUserChat($chatId, $userData)) {
             return ResponseUtils::buildAccessDenied();
         }
-        return response()->json($this->messageService->getLastMessagesAfterDB($chatId, $userData->id, $after, $number));
+        return response()->json(new CommunicationData($this->messageService->getLastMessagesAfterDB($chatId, $userData->id, $after, $number), $this->rtcService->getCall($chatId, $userData->displayName)));
     }
 
     public function getMessagesBefore(int $chatId, $before, Request $request, int $number = 50) {
@@ -108,6 +112,53 @@ class ChatController extends Controller
     public function setLastReadMessage(int $chatId, int $messageId, Request $request) {
         $userData = $request->user();
         $this->messageService->setLastReadMessage($chatId, $userData->id, $messageId);
+        return ResponseUtils::buildEmptyOkResponse();
+    }
+
+    public function makeRtcCall(int $chatId, Request $request) {
+        $userData = $request->user();
+        try {
+            $this->validate($request, [
+                'target' => 'required',
+                'sdp' => 'required',
+                'type' => 'required'
+            ]);
+        } catch (ValidationException $e) {
+            return ResponseUtils::buildErrorResponse($e->getMessage(), 0, 404);
+        }
+        $callId = $this->rtcService->assignCall($chatId, $request->target, $request->sdp, $request->type, $userData->displayName);
+        return response()->json(['callId' => $callId]);
+    }
+
+    public function answerRtcCall(int $chatId, Request $request) {
+        $userData = $request->user();
+        try {
+            $this->validate($request, [
+                'callId' => 'required',
+                'sdp' => 'required',
+                'type' => 'required'
+            ]);
+        } catch (ValidationException $e) {
+            return ResponseUtils::buildErrorResponse($e->getMessage(), 0, 404);
+        }
+
+        $this->rtcService->answerCall($chatId, $request->callId, $userData->displayName, $request->sdp, $request->type);
+        return ResponseUtils::buildEmptyOkResponse();
+    }
+
+    public function addRtcCandidate(int $chatId, Request $request) {
+        $userData = $request->user();
+        try {
+            $this->validate($request, [
+                'callId' => 'required',
+                'candidate' => 'required',
+                'sdpMid' => 'required',
+                'sdpMLineIndex' => 'required',
+            ]);
+        } catch (ValidationException $e) {
+            return ResponseUtils::buildErrorResponse($e->getMessage(), 0, 404);
+        }
+        $this->rtcService->addCandidate($chatId, $request->callId, $request->candidate, $request->sdpMid, $request->sdpMLineIndex, $userData->displayName);
         return ResponseUtils::buildEmptyOkResponse();
     }
 
