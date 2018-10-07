@@ -43,5 +43,7 @@ $router->group(['prefix' => 'api'], function () use ($router) {
         $router->post('chat/{chatId}/rtc/call', 'ChatController@makeRtcCall');
         $router->post('chat/{chatId}/rtc/candidate', 'ChatController@AddRtcCandidate');
         $router->post('chat/{chatId}/rtc/answer', 'ChatController@answerRtcCall');
+        $router->post('chat/{chatId}/rtc/cancel', 'ChatController@cancelRtcCall');
+        $router->post('chat/{chatId}/rtc/onCall', 'ChatController@onRtcCall');
     });
 });

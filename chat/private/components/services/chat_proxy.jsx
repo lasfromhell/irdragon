@@ -127,4 +127,16 @@ export default class ChatProxy {
             type: answer.type
         });
     }
+
+    cancelCall(chatId, callId) {
+        return this.axios.post(`/api/chat/${chatId}/rtc/cancel`, {
+            callId: callId
+        });
+    }
+
+    onCall(chatId, callId) {
+        return this.axios.post(`/api/chat/${chatId}/rtc/onCall`, {
+            callId: callId
+        });
+    }
 }

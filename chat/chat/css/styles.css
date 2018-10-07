@@ -461,14 +461,24 @@ body {
     cursor: pointer;
 }
 
-@keyframes blinking_call {
+@keyframes blinking_incoming_call {
     from { color: rgba(0, 255, 0, 1); }
     50% { color: rgba(0, 255, 0, 0); }
     to { color: rgba(0, 255, 0, 1); }
 }
 
+@keyframes blinking_calling {
+    from { color: rgba(255, 0, 0, 1); }
+    50% { color: rgba(255, 0, 0, 0); }
+    to { color: rgba(255, 0, 0, 1); }
+}
+
 .rtc_phone_incoming {
-    animation: blinking_call 1s linear infinite;
+    animation: blinking_incoming_call 1s linear infinite;
+}
+
+.rtc_phone_calling {
+    animation: blinking_calling 1s linear infinite;
 }
 
 .rtc_phone_cancel {

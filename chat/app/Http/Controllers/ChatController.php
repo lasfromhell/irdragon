@@ -126,8 +126,8 @@ class ChatController extends Controller
         } catch (ValidationException $e) {
             return ResponseUtils::buildErrorResponse($e->getMessage(), 0, 404);
         }
-        $callId = $this->rtcService->assignCall($chatId, $request->target, $request->sdp, $request->type, $userData->displayName);
-        return response()->json(['callId' => $callId]);
+        $callData = $this->rtcService->assignCall($chatId, $request->target, $request->sdp, $request->type, $userData->displayName);
+        return response()->json(['callId' => $callData->callId]);
     }
 
     public function answerRtcCall(int $chatId, Request $request) {
@@ -142,8 +142,12 @@ class ChatController extends Controller
             return ResponseUtils::buildErrorResponse($e->getMessage(), 0, 404);
         }
 
-        $this->rtcService->answerCall($chatId, $request->callId, $userData->displayName, $request->sdp, $request->type);
-        return ResponseUtils::buildEmptyOkResponse();
+        if ($this->rtcService->answerCall($chatId, $request->callId, $userData->displayName, $request->sdp, $request->type)) {
+            return ResponseUtils::buildEmptyOkResponse();
+        }
+        else {
+            return ResponseUtils::buildErrorResponse('Call not found to answer', 0, 404);
+        }
     }
 
     public function addRtcCandidate(int $chatId, Request $request) {
@@ -158,8 +162,46 @@ class ChatController extends Controller
         } catch (ValidationException $e) {
             return ResponseUtils::buildErrorResponse($e->getMessage(), 0, 404);
         }
-        $this->rtcService->addCandidate($chatId, $request->callId, $request->candidate, $request->sdpMid, $request->sdpMLineIndex, $userData->displayName);
-        return ResponseUtils::buildEmptyOkResponse();
+        if ($this->rtcService->addCandidate($chatId, $request->callId, $request->candidate, $request->sdpMid, $request->sdpMLineIndex, $userData->displayName)) {
+            return ResponseUtils::buildEmptyOkResponse();
+        }
+        else {
+            return ResponseUtils::buildErrorResponse('Call not found to add RTC candidate', 0, 404);
+        }
+    }
+
+    public function cancelRtcCall(int $chatId, Request $request) {
+        $userData = $request->user();
+        try {
+            $this->validate($request, [
+                'callId' => 'required',
+            ]);
+        } catch (ValidationException $e) {
+            return ResponseUtils::buildErrorResponse($e->getMessage(), 0, 404);
+        }
+        if ($this->rtcService->cancelCall($chatId, $request->callId, $userData->displayName)) {
+            return ResponseUtils::buildEmptyOkResponse();
+        }
+        else {
+            return ResponseUtils::buildErrorResponse('Call not found to cancel', 0, 404);
+        }
+    }
+
+    public function onRtcCall(int $chatId, Request $request) {
+        $userData = $request->user();
+        try {
+            $this->validate($request, [
+                'callId' => 'required',
+            ]);
+        } catch (ValidationException $e) {
+            return ResponseUtils::buildErrorResponse($e->getMessage(), 0, 404);
+        }
+        if ($this->rtcService->onCall($chatId, $request->callId, $userData->displayName)) {
+            return ResponseUtils::buildEmptyOkResponse();
+        }
+        else {
+            return ResponseUtils::buildErrorResponse('Call not found to set as in progress', 0, 404);
+        }
     }
 
     private function checkUserChat($chatId, $userData) {

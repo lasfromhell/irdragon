@@ -73,13 +73,15 @@ export default class Chat extends React.Component {
 
         window.addEventListener('focus', this.onWindowActive.bind(this));
         window.addEventListener('resize', this.onWindowResize.bind(this));
+        window.addEventListener('beforeUnload', this.onWindowBeforeUnload.bind(this));
+
         if (document.hasFocus()) {
             this.onWindowActive();
         }
     }
 
     initializeCallService() {
-        this.callService = new CallService(this.log, this.chatProxy, this.chatId);
+        this.callService = new CallService(this.log, this.chatProxy, this.chatId, this.props.userData.displayName);
         this.callService.onNewTrack = (track, earpiece) => {
             if (this.refs.remoteVideo.srcObject) {
                 this.log.debug(`Adding track ${JSON.stringify(track)}`);
@@ -688,6 +690,10 @@ export default class Chat extends React.Component {
         }
     }
 
+    onWindowBeforeUnload() {
+        this.callService.cancelCall(true);
+    }
+
     // onInputChange(e) {
     //     const nativeEvent = e.nativeEvent;
     //     var offset = Utils.getSelectionCharacterOffsetWithin(this.refs.chatInput);
@@ -722,6 +728,7 @@ export default class Chat extends React.Component {
     getCallStateClass() {
         switch (this.state.callState) {
             case CALL_STATE_CALLING:
+                return " rtc_phone_calling";
             case CALL_STATE_CALLING_ANSWER:
             case CALL_STATE_CONNECTED:
             case CALL_STATE_INCOMING_CALLING:

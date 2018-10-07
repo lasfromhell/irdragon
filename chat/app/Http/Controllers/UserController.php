@@ -9,6 +9,7 @@
 namespace App\Http\Controllers;
 
 use App\Contracts\PresenceService;
+use App\Contracts\RTCService;
 use App\Contracts\SessionService;
 use App\Contracts\UserService;
 use App\Http\Models\UserData;
@@ -24,11 +25,13 @@ class UserController extends Controller
     protected $userService;
     protected $sessionService;
     protected $presenceService;
+    protected $rtcService;
 
-    public function __construct(UserService $userService, SessionService $sessionService, PresenceService $presenceService) {
+    public function __construct(UserService $userService, SessionService $sessionService, PresenceService $presenceService, RTCService $rtcService) {
         $this->userService = $userService;
         $this->sessionService = $sessionService;
         $this->presenceService = $presenceService;
+        $this->rtcService = $rtcService;
     }
 
     public function encodePassword(Request $request) {
@@ -84,6 +87,10 @@ class UserController extends Controller
     }
 
     public function authorizeRequest(Request $request) {
+        $userData = $request->user();
+        $this->userService->getUserChats($userData->id)->each(function($uc) use ($userData) {
+            $this->rtcService->cancelAnyCall($uc->chat_id, $userData->displayName);
+        });
         return response()->json($request->user(), 200);
     }
 

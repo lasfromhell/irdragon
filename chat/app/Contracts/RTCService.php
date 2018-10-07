@@ -11,8 +11,11 @@ namespace App\Contracts;
 
 interface RTCService
 {
-    public function assignCall($chatId, $target, $sdp, $type, $displayName);
-    public function getCall($chatId, $displayName);
+    public function assignCall(int $chatId, $target, $sdp, $type, $displayName);
+    public function getCall(int $chatId, $displayName);
     public function answerCall(int $chatId, $callId, $displayName, $sdp, $type);
     public function addCandidate(int $chatId, $callId, $candidate, $sdpMid, $sdpMLineIndex, $displayName);
+    public function cancelCall(int $chatId, $callId, $displayName);
+    public function cancelAnyCall(int $chatId, $displayName);
+    public function onCall(int $chatId, $callId, $displayName);
 }

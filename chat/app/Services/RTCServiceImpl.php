@@ -26,6 +26,8 @@ class RTCServiceImpl implements RTCService
 
     const STATE_INITIAL = 'initial';
     const STATE_ANSWER = 'answer';
+    const STATE_ON_CALL = 'in_call';
+    const STATE_CANCELLED = 'cancelled';
 
     /**
      * RTCServiceImpl constructor.
@@ -36,79 +38,156 @@ class RTCServiceImpl implements RTCService
         $this->cacheService = $cacheService;
     }
 
-    public function assignCall($chatId, $target, $sdp, $type, $displayName)
+    public function assignCall(int $chatId, $target, $sdp, $type, $displayName)
     {
         $key = $this->prepareRTCTargetKey($chatId, $target);
         if (!$this->cacheService->exists($key)) {
-            $callId = Utils::generateGuid();
+            $callId = null;
+            $callKey = null;
+            do {
+                $callId = Utils::generateGuid();
+                $callKey = $this->prepareCallKey($chatId, $callId);
+            } while ($this->cacheService->exists($callKey));
             $this->cacheService->set($key, $callId, $this::RTC_CALL_TTL);
-            $this->cacheService->set($callId, new RTCCallData($chatId, $target, $sdp, $type, $this::STATE_INITIAL, $callId, [], $displayName), $this::RTC_CALL_TTL);
-            return $callId;
+            $otherPartyKey = $this->prepareRTCTargetKey($chatId, $displayName);
+            $this->cacheService->set($otherPartyKey, $callId, $this::RTC_CALL_TTL);
+            $callData = new RTCCallData($chatId, $target, $sdp, $type, $this::STATE_INITIAL, $callId, [], $displayName);
+            $this->cacheService->set($callKey, $callData, $this::RTC_CALL_TTL);
+            return $callData;
         }
         else {
             return null;
         }
     }
 
-    public function getCall($chatId, $displayName) {
+    public function getCall(int $chatId, $displayName) {
         $key = $this->prepareRTCTargetKey($chatId, $displayName);
         $callId = $this->cacheService->get($key);
         if ($callId) {
-            return $this->cacheService->get($callId);
+            $callKey = $this->prepareCallKey($chatId, $callId);
+            return $this->cacheService->get($callKey);
         }
         return null;
     }
 
     public function answerCall(int $chatId, $callId, $displayName, $sdp, $type)
     {
-        $this->cacheService->mutex($callId)->synchronized(function () use ($callId, $displayName, $chatId, $sdp, $type) {
-            $callData = $this->cacheService->get($callId);
-            if ($callData) {
-                if ($callData->state == $this::STATE_INITIAL) {
-                    $callData->state = $this::STATE_ANSWER;
-                    $callData->callee = $displayName;
-                    $callData->answerSdp = $sdp;
-                    $callData->answerType = $type;
-                    $key = $this->prepareRTCTargetKey($chatId, $callData->caller);
-                    $this->cacheService->set($callId, $callData, $this::RTC_CALL_TTL);
-                    $this->cacheService->set($key, $callId, $this::RTC_CALL_TTL);
-                    return $key;
-                }
+        $result = null;
+        $key = $this->prepareRTCTargetKey($chatId, $displayName);
+        $this->cacheService->mutex($callId)->check(function() use ($key, $callId) {
+            return $this->checkCallId($key, $callId);
+        })->then(function () use ($callId, $displayName, $chatId, $sdp, $type, &$result) {
+            $callKey = $this->prepareCallKey($chatId, $callId);
+            $callData = $this->cacheService->get($callKey);
+            if ($callData && $callData->state == $this::STATE_INITIAL) {
+                $callData->state = $this::STATE_ANSWER;
+                $callData->callee = $displayName;
+                $callData->answerSdp = $sdp;
+                $callData->answerType = $type;
+                $this->cacheService->set($callKey, $callData, $this::RTC_CALL_TTL);
+                $result = $callData;
             }
         });
-        return null;
+        return $result;
     }
 
     public function addCandidate(int $chatId, $callId, $candidate, $sdpMid, $sdpMLineIndex, $displayName)
     {
-//        $candidateKey = $this->prepareCandidateKey($chatId, $displayName);
-//        $candidates = $this->cacheService->get($candidateKey);
-//        if (!$candidates) {
-//            $candidates = [];
-//        }
-//        $candidates[] = new RTCCandidateData($candidate, $sdpMid, $sdpMLineIndex);
-//        $this->cacheService->set($candidateKey, $candidates, $this::RTC_CANDIDATE_TTL);
-
-        $this->cacheService->mutex($callId)->synchronized(function () use ($callId, $displayName, $candidate, $sdpMid, $sdpMLineIndex){
-            $callData = $this->cacheService->get($callId);
-            if ($callData) {
-                if ($callData->state == $this::STATE_INITIAL || $callData->state == $this::STATE_ANSWER) {
-                    if (!array_key_exists($displayName, $callData->candidates)) {
-                        $callData->candidates[$displayName] = [];
-                    }
-                    $callData->candidates[$displayName][] = new RTCCandidateData($candidate, $sdpMid, $sdpMLineIndex);
-                    $this->cacheService->set($callId, $callData, $this::RTC_CANDIDATE_TTL);
+        $result = null;
+        $key = $this->prepareRTCTargetKey($chatId, $displayName);
+        $this->cacheService->mutex($callId)->check(function() use ($key, $callId) {
+            return $this->checkCallId($key, $callId);
+        })->then(function () use ($callId, $displayName, $candidate, $sdpMid, $sdpMLineIndex, &$result, $chatId){
+            $callKey = $this->prepareCallKey($chatId, $callId);
+            $callData = $this->cacheService->get($callKey);
+            if ($callData && ($callData->state == $this::STATE_INITIAL || $callData->state == $this::STATE_ANSWER)) {
+                if (!array_key_exists($displayName, $callData->candidates)) {
+                    $callData->candidates[$displayName] = [];
                 }
+                $callData->candidates[$displayName][] = new RTCCandidateData($candidate, $sdpMid, $sdpMLineIndex);
+                $this->cacheService->set($callKey, $callData, $this::RTC_CANDIDATE_TTL);
+                $result = $callData;
+            }
+            if ($callData && $callData->state == $this::STATE_ON_CALL) {
+                $result = $callData;
             }
         });
+        return $result;
+    }
+
+    public function cancelCall(int $chatId, $callId, $displayName) {
+        $result = null;
+        $key = $this->prepareRTCTargetKey($chatId, $displayName);
+        $this->cacheService->mutex($callId)->check(function() use ($key, $callId) {
+            return $this->checkCallId($key, $callId);
+        })->then(function () use ($chatId, $callId, &$result) {
+            $result = $this->cancelCallByCallId($chatId, $callId);
+        });
+        return $result;
+    }
+
+    public function onCall(int $chatId, $callId, $displayName) {
+        $result = null;
+        $key = $this->prepareRTCTargetKey($chatId, $displayName);
+        $this->cacheService->mutex($callId)->check(function() use ($key, $callId) {
+            return $this->checkCallId($key, $callId);
+        })->then(function () use ($chatId, $callId, &$result) {
+            $callKey = $this->prepareCallKey($chatId, $callId);
+            $callData = $this->cacheService->get($callKey);
+            if ($callData && ($callData->state == $this::STATE_ANSWER)) {
+                $callData->state = $this::STATE_ON_CALL;
+                $this->cacheService->set($callKey, $callData, $this::RTC_CANDIDATE_TTL);
+                $result = $callData;
+            }
+            if ($callData && $callData->state == $this::STATE_ON_CALL) {
+                $result = $callData;
+            }
+        });
+        return $result;
+    }
+
+    public function cancelAnyCall(int $chatId, $displayName) {
+        $result = null;
+        $key = $this->prepareRTCTargetKey($chatId, $displayName);
+        $callId = $this->cacheService->get($key);
+        if ($callId) {
+            $this->cacheService->mutex($callId)->synchronized(function () use ($chatId, $callId, &$result) {
+                $result = $this->cancelCallByCallId($chatId, $callId);
+            });
+        }
+        return $result;
+    }
+
+    private function cancelCallByCallId($chatId, $callId) {
+        $callKey = $this->prepareCallKey($chatId, $callId);
+        $callData = $this->cacheService->get($callKey);
+        if ($callData && ($callData->state == $this::STATE_ON_CALL || $callData->state == $this::STATE_INITIAL ||
+                $callData->state == $this::STATE_ANSWER)) {
+            $callData->state = $this::STATE_CANCELLED;
+            $this->cacheService->set($callKey, $callData, $this::RTC_CANDIDATE_TTL);
+//            if ($callData->caller) {
+//                $key = $this->prepareRTCTargetKey($chatId, $callData->caller);
+//                $this->cacheService->delete($key);
+//            }
+//            if ($callData->callee) {
+//                $key = $this->prepareRTCTargetKey($chatId, $callData->callee);
+//                $this->cacheService->delete($key);
+//            }
+            return $callData;
+        }
         return null;
+    }
+
+    private function checkCallId($key, $callId) {
+        $dbCallId = $this->cacheService->get($key);
+        return $dbCallId && $callId === $dbCallId;
     }
 
     private function prepareRTCTargetKey($chatId, $target) {
         return 'RTCTarget-' . $chatId . '-' . $target;
     }
 
-    private function prepareCandidateKey($chatId, $target) {
-        return 'RTCCandidate-' . $chatId . '-' . $target;
+    private function prepareCallKey($chatId, $callId) {
+        return 'RTCCall-' . $chatId . '-' . $callId;
     }
 }

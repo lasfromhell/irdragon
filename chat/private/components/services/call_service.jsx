@@ -46,7 +46,7 @@ const DEFAULT_ICE_SERVERS = [{url:'stun:stun01.sipphone.com'},
 
 export default class CallService {
 
-    constructor(log, chatProxy, chatId) {
+    constructor(log, chatProxy, chatId, displayName) {
         this.stream = null;
         this.log = log;
         this.chatProxy = chatProxy;
@@ -54,6 +54,8 @@ export default class CallService {
         this.reset();
         this.onNewTrack = null;
         this.onCallStateChanged = null;
+        this.displayName = displayName;
+        this.lastCancelledCall = null;
     }
 
     reset() {
@@ -63,6 +65,12 @@ export default class CallService {
         this.mediaState = MEDIA_STATE_NONE;
         this.communications = null;
         this.callId = null;
+        this.videoAllowed = false;
+        this.pc = null;
+    }
+
+    setVideoAllowed(allow) {
+        this.videoAllowed = allow;
     }
 
     setCallState(state) {
@@ -83,21 +91,32 @@ export default class CallService {
     setIncomingData(communications) {
         if (communications && communications.callId) {
             this.communications = communications;
-            if (this.callState === CALL_STATE_NONE && communications.state === 'initial') {
+            if (this.callState === CALL_STATE_NONE && communications.state === 'initial' && communications.caller !== this.displayName && this.lastCancelledCall !== communications.callId) {
                 this.setCallState(CALL_STATE_INCOMING);
+                this.callId = communications.callId;
                 this.otherPartyDisplayName = communications.caller;
                 this.log.info(`New incoming call ${communications.callId} from ${communications.caller}`);
             }
-            else if (this.callState === CALL_STATE_CALLING) {
+            else if (this.callState === CALL_STATE_CALLING && communications.answerSdp && communications.state === 'answer') {
                 this.setCallState(CALL_STATE_CALLING_ANSWER);
+                this.log.info(`Answer received ${communications.callId} from ${communications.callee}`);
                 this.onAnswerReceived();
+            }
+            if (communications.state === 'cancelled') {
+                if (communications.callId === this.callId) {
+                    this.cancelCall(false);
+                }
+                if (this.callState === CALL_STATE_INCOMING) {
+                    this.log.info(`Call cancelled received for incoming call ${communications.callId}`);
+                    this.reset();
+                }
             }
             if (this.callState === CALL_STATE_CALLING || this.callState === CALL_STATE_CALLING_ANSWER || this.callState === CALL_STATE_INCOMING_CALLING) {
                 this.checkCandidates();
             }
         }
         else if (this.callState === CALL_STATE_INCOMING) {
-            this.setCallState(CALL_STATE_NONE);
+            this.reset();
         }
     }
 
@@ -113,13 +132,16 @@ export default class CallService {
                 });
                 navigator.mediaDevices.getUserMedia({
                     audio: devices.filter(d => d.kind === 'audioinput').length > 0,
-                    video: false//devices.filter(d => d.kind === 'videoinput').length > 0
+                    video: this.videoAllowed && devices.filter(d => d.kind === 'videoinput').length > 0
                 }).then((stream) => {
                     this.log.info('Stream received ' + stream);
                     this.mediaState = MEDIA_STATE_INITIALIZED;
                     this.stream = stream;
                     this.activateRTCSession();
                 }).catch((err) => {
+                    if (this.callState === CALL_STATE_INCOMING) {
+                        this.cancelCall(true);
+                    }
                     this.log.error('Unable to get stream: ' + err.message);
                 })
             })
@@ -127,29 +149,40 @@ export default class CallService {
         else if (this.callState === CALL_STATE_NONE || this.callState === CALL_STATE_INCOMING) {
             this.activateRTCSession();
         }
-        else if (this.callState === CALL_STATE_CONNECTED) {
-            this.cancelCall();
+        else if (this.callState === CALL_STATE_CONNECTED || this.callState === CALL_STATE_CALLING_ANSWER ||
+            this.callState === CALL_STATE_CALLING) {
+            this.cancelCall(true);
         }
     }
 
-    cancelCall() {
-        this.pc.close();
+    cancelCall(sendMessage) {
+        if (this.callState === CALL_STATE_NONE) return;
+        this.log.info(`Cancelling call... ${this.callId} ${this.pc}`);
+        const callId = this.callId;
+        if (this.pc) {
+            this.pc.close();
+        }
+        this.lastCancelledCall = callId;
+        this.reset();
+        if (callId && sendMessage) {
+            this.log.info(`Sending call cancel... ${callId}`);
+            this.chatProxy.cancelCall(this.chatId, callId);
+        }
     }
 
     sendCandidate(candidate) {
         this.chatProxy.addCandidate(this.chatId, this.callId, candidate)
             .catch(e => {
-                alert('Unable to add candidate. ' + e.message);
                 this.log.error('Unable to make a call ' + e.message);
             })
     }
 
     activateRTCSession() {
         this.pc = new RTCPeerConnection({ iceServers: DEFAULT_ICE_SERVERS});
+        const pc = this.pc;
         this.pc.onicecandidate = (e) => {
             if (!e.candidate) return;
             this.log.debug(`New Ice Candidate: ${e.candidate.sdpMid} ${e.candidate.sdpMLineIndex} ${e.candidate.candidate}`);
-
             if (this.callId) {
                 this.sendCandidate(e.candidate);
             }
@@ -158,30 +191,44 @@ export default class CallService {
             }
         };
         this.pc.onicegatheringstatechange = (e) => {
+            if (!this.pc) return;
             this.log.info(`Ice state changed: ${this.pc.iceGatheringState}`);
         };
         this.pc.onicecandidateerror = (e) => {
             this.log.error(`Ice candidate error: ${e.message}`);
         };
         this.pc.oniceconnectionstatechange = (e) => {
+            if (!this.pc) return;
             this.log.info(`Ice connection state changed: ${this.pc.iceConnectionState}`);
-            if (this.pc.iceConnectionState === 'failed' || this.pc.iceConnectionState === 'disconnected' || this.pc.iceConnectionState === 'closed') {
-                this.reset();
+            if (this.pc.iceConnectionState === 'failed') {
+                if (pc === this.pc) {
+                    this.cancelCall(true);
+                }
+            }
+            else if (this.pc.iceConnectionState === 'closed') {
+                if (pc === this.pc) {
+                    this.reset();
+                }
             }
             else if (this.pc.iceConnectionState === 'connected') {
-                this.setCallState(CALL_STATE_CONNECTED);
+                if (pc === this.pc) {
+                    this.setCallState(CALL_STATE_CONNECTED);
+                    this.chatProxy.onCall(this.chatId, this.callId);
+                }
             }
         };
         this.pc.onconnectionstatechange = (e) => {
+            if (!this.pc) return;
             this.log.info(`RTC connection state changed: ${this.pc.connectionState}`);
         };
         this.pc.ontrack = (e) => {
             this.log.info(`Track received ${JSON.stringify(e.track)}`);
-            if (this.onNewTrack) {
-                this.onNewTrack(e.track);
+            if (pc === this.pc) {
+                if (this.onNewTrack) {
+                    this.onNewTrack(e.track);
+                }
             }
         };
-
         this.stream.getTracks().forEach(track => this.pc.addTrack(track, this.stream));
         if (this.callState === CALL_STATE_INCOMING) {
             this.callId = this.communications.callId;
@@ -192,11 +239,11 @@ export default class CallService {
                 type: this.communications.type
             });
             this.pc.createAnswer({}).then(answer => {
+                if (pc !== this.pc) return;
                 this.pc.setLocalDescription(answer);
                 this.log.debug('Local SDP: ' + answer.sdp);
                 this.chatProxy.answerCall(this.chatId, this.communications.callId, answer)
                     .catch(e => {
-                        alert('Unable to answer call. ' + e.message);
                         this.log.error('Unable to answer call ' + e.message);
                     })
             })
@@ -209,12 +256,15 @@ export default class CallService {
                 this.chatProxy.makeCall(this.chatId, this.otherPartyDisplayName, offer)
                     .then(r => {
                         this.callId = r.data.callId;
+                        if (pc !== this.pc) {
+                            this.cancelCall(true);
+                            return;
+                        }
                         if (this.localSavedCandidates) {
                             this.localSavedCandidates.forEach(v => this.sendCandidate(v));
                         }
                     })
                     .catch(e => {
-                        alert('Unable to make call. ' + e.message);
                         this.log.error('Unable to make call ' + e.message);
                     })
             }).catch(err => {
@@ -244,11 +294,13 @@ export default class CallService {
                 });
                 if (!candidateFound) {
                     this.log.info(`New Remote Ice Candidate: ${r.sdpMid} ${r.sdpMLineIndex} ${r.candidate}`);
-                    this.pc.addIceCandidate({
-                        candidate: r.candidate,
-                        sdpMid: r.sdpMid,
-                        sdpMLineIndex: r.sdpMLineIndex
-                    });
+                    if (this.pc) {
+                        this.pc.addIceCandidate({
+                            candidate: r.candidate,
+                            sdpMid: r.sdpMid,
+                            sdpMLineIndex: r.sdpMLineIndex
+                        });
+                    }
                 }
             });
             this.remoteSavedCadnidates = remoteCandidates;
