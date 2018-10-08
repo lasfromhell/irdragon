@@ -190,4 +190,26 @@ class RTCServiceImpl implements RTCService
     private function prepareCallKey($chatId, $callId) {
         return 'RTCCall-' . $chatId . '-' . $callId;
     }
+
+    public function heartbeat(int $chatId, $callId, $displayName) {
+        $result = null;
+        $key = $this->prepareRTCTargetKey($chatId, $displayName);
+        $this->cacheService->mutex($callId)->check(function() use ($key, $callId) {
+            return $this->checkCallId($key, $callId);
+        })->then(function () use ($chatId, $callId, &$result) {
+            $callKey = $this->prepareCallKey($chatId, $callId);
+            $this->cacheService->touch($callKey, $this::RTC_CALL_TTL);
+            $callData = $this->cacheService->get($callKey);
+            if ($callData->caller) {
+                $key = $this->prepareRTCTargetKey($chatId, $callData->caller);
+                $this->cacheService->touch($key, $this::RTC_CALL_TTL);
+            }
+            if ($callData->callee) {
+                $key = $this->prepareRTCTargetKey($chatId, $callData->callee);
+                $this->cacheService->touch($key, $this::RTC_CALL_TTL);
+            }
+            $result = $callData;
+        });
+        return $result;
+    }
 }

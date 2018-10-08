@@ -204,6 +204,23 @@ class ChatController extends Controller
         }
     }
 
+    public function rtcCallHeartBeat(int $chatId, Request $request) {
+        $userData = $request->user();
+        try {
+            $this->validate($request, [
+                'callId' => 'required',
+            ]);
+        } catch (ValidationException $e) {
+            return ResponseUtils::buildErrorResponse($e->getMessage(), 0, 404);
+        }
+        if ($this->rtcService->heartbeat($chatId, $request->callId, $userData->displayName)) {
+            return ResponseUtils::buildEmptyOkResponse();
+        }
+        else {
+            return ResponseUtils::buildErrorResponse('Call not found to set as in progress', 0, 404);
+        }
+    }
+
     private function checkUserChat($chatId, $userData) {
         return $this->userService->getUserChats($userData->id)->map(function($uc) {
                 return $uc->chat_id;

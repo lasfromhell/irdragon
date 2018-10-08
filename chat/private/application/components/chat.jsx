@@ -19,6 +19,7 @@ export default class Chat extends React.Component {
 
     constructor(props) {
         super(props);
+        this.a = 0;
         this.log = props.log;
         this.state = {
             messages: new SortedMap(),
@@ -485,6 +486,7 @@ export default class Chat extends React.Component {
     }
 
     onLogout () {
+        this.callService.cancelCall(true);
         this.stopProcessing();
         this.props.onLogout()
     }

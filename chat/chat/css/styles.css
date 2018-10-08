@@ -300,6 +300,7 @@ body {
     margin: 0.1em 0;
     display: flex;
     vertical-align: middle;
+    align-items: center;
 }
 
 .presence-name {

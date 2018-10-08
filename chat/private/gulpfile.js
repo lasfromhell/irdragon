@@ -2,29 +2,56 @@ const gulp = require('gulp');
 const browserify = require('browserify');
 const babelify = require('babelify');
 const source = require('vinyl-source-stream');
-
-const swallowError = (error) => {
-    console.log(error.toString());
-    this.emit('end');
-};
+const uglify = require('gulp-uglify');
+const streamify = require('gulp-streamify');
+const sourcemaps = require('gulp-sourcemaps');
+const buffer     = require('vinyl-buffer');
+const gutil      = require('gulp-util');
 
 gulp.task('build', function() {
-    browserify({entries: './app.jsx', extensions: ['.jsx'], debug: true})
+    browserify({entries: 'application/app.jsx', extensions: ['.jsx'], debug: true})
+        .transform(babelify, {sourceMaps: true})
+        .bundle()
+        .on('error', function(err) {
+            console.error(err.stack);
+            this.emit('end');
+        })
+        .pipe(source('bundle.js'))
+        .pipe(buffer())
+        .pipe(sourcemaps.init({loadMaps: true}))
+        .pipe(streamify(uglify()))
+        .pipe(sourcemaps.write('./'))
+        .pipe(gulp.dest('../chat/js'))
+        .pipe(gutil.noop());
+
+});
+
+gulp.task('build-dev', function() {
+    browserify({entries: 'application/app.jsx', extensions: ['.jsx'], debug: true})
         .transform(babelify)
         .bundle()
+        .on('error', function(err) {
+            console.error(err.stack);
+            this.emit('end');
+        })
         .pipe(source('bundle.js'))
-        .pipe(gulp.dest('../chat/js'));
+        // .pipe(buffer())
+        // .pipe(sourcemaps.init({loadMaps: true}))
+        // .pipe(streamify(uglify()))
+        // .pipe(sourcemaps.write('./'))
+        .pipe(gulp.dest('../chat/js'))
+        .pipe(gutil.noop());
+
 });
 
-gulp.task('watch', ['build'], function() {
-    gulp.watch('*.jsx', ['build'])
-        .on('error', swallowError);
-    gulp.watch('components/*.jsx', ['build'])
-        .on('error', swallowError);
-    gulp.watch('components/services/*.jsx', ['build'])
-        .on('error', swallowError);
-    gulp.watch('components/utils/*.jsx', ['build'])
-        .on('error', swallowError);
+gulp.task('watch', function() {
+    gulp.start('build');
+    gulp.watch('application/**/*.jsx', ['build']);
 });
 
-gulp.task('default', ['watch']);
+gulp.task('watch-dev', function() {
+    gulp.start('build-dev');
+    gulp.watch('application/**/*.jsx', ['build-dev']);
+});
+
+gulp.task('default', ['watch-dev']);

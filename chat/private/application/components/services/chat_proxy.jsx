@@ -139,4 +139,10 @@ export default class ChatProxy {
             callId: callId
         });
     }
+
+    callHeartbeat(chatId, callId) {
+        return this.axios.post(`/api/chat/${chatId}/rtc/heartbeat`, {
+            callId: callId
+        });
+    }
 }

@@ -18,4 +18,5 @@ interface RTCService
     public function cancelCall(int $chatId, $callId, $displayName);
     public function cancelAnyCall(int $chatId, $displayName);
     public function onCall(int $chatId, $callId, $displayName);
+    public function heartbeat(int $chatId, $callId, $displayName);
 }

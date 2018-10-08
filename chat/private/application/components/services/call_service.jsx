@@ -56,9 +56,14 @@ export default class CallService {
         this.onCallStateChanged = null;
         this.displayName = displayName;
         this.lastCancelledCall = null;
+        this.heartBeatInterval = null;
     }
 
     reset() {
+        if (this.heartBeatInterval) {
+            clearInterval(this.heartBeatInterval);
+        }
+        this.heartBeatInterval = null;
         this.remoteSavedCadnidates = [];
         this.localSavedCandidates = [];
         this.setCallState(CALL_STATE_NONE);
@@ -177,6 +182,12 @@ export default class CallService {
             })
     }
 
+    callHeartBeat() {
+        if (this.callId) {
+            this.chatProxy.callHeartbeat(this.chatId, this.callId);
+        }
+    }
+
     activateRTCSession() {
         this.pc = new RTCPeerConnection({ iceServers: DEFAULT_ICE_SERVERS});
         const pc = this.pc;
@@ -214,6 +225,8 @@ export default class CallService {
                 if (pc === this.pc) {
                     this.setCallState(CALL_STATE_CONNECTED);
                     this.chatProxy.onCall(this.chatId, this.callId);
+                    this.callHeartBeat();
+                    setInterval(this.callHeartBeat.bind(this), 10000);
                 }
             }
         };
@@ -245,7 +258,7 @@ export default class CallService {
                 this.chatProxy.answerCall(this.chatId, this.communications.callId, answer)
                     .catch(e => {
                         this.log.error('Unable to answer call ' + e.message);
-                    })
+                    });
             })
         }
         else if (this.callState === CALL_STATE_NONE) {
@@ -266,7 +279,7 @@ export default class CallService {
                     })
                     .catch(e => {
                         this.log.error('Unable to make call ' + e.message);
-                    })
+                    });
             }).catch(err => {
                 this.log.error('Unable to create offer. ' + err.message);
             })
