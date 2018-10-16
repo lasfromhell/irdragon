@@ -27,9 +27,15 @@ export default class Log {
 
     download() {
         const link = document.createElement('a');
-        const blob = new Blob([this._log], {type: 'octet/stream'});
-        link.href = window.URL.createObjectURL(blob);
-        link.download = 'log_' + new Date().getTime() + ".log";
+        // const blob = new Blob([this._log], {type: 'octet/stream'});
+        // link.href = window.URL.createObjectURL(blob);
+        // link.download = 'log_' + new Date().getTime() + ".log";
+        // link.click();
+        link.setAttribute('href', 'data:text/plain;charset=utf-8,' + encodeURIComponent(this._log));
+        link.setAttribute('download', 'log_' + new Date().getTime() + ".log");
+        link.style.display = 'none';
+        document.body.appendChild(link);
         link.click();
+        document.body.removeChild(link);
     }
 }

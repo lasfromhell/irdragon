@@ -5,9 +5,9 @@ body {
 .chat-box {
     display: inline-flex;
     flex-direction: column;
-    background: rgb(181,189,200);
-    background: radial-gradient(ellipse at center, rgba(208,223,237,1) 0%,rgba(135,161,183,1) 100%);
-    filter: progid:DXImageTransform.Microsoft.gradient( startColorstr='#b5bdc8', endColorstr='#87a1b7',GradientType=1 );
+    /*background: rgb(181,189,200);*/
+    background: radial-gradient(ellipse at center, rgb(247, 208, 245) 0%, rgb(237, 188, 235) 100%);
+    /*filter: progid:DXImageTransform.Microsoft.gradient( startColorstr='#b5bdc8', endColorstr='#87a1b7',GradientType=1 );*/
     border: 3pt solid black;
     -webkit-box-shadow: 1px 1px 1px 1px rgba(30,30,30,1);
     -moz-box-shadow: 1px 1px 1px 1px rgba(30,30,30,1);
@@ -110,6 +110,10 @@ body {
     outline: none;
 }
 
+.form-submit-btn:not([disabled]):hover {
+    filter: brightness(110%);
+}
+
 .form-submit-text {
     width: 70%;
     border-radius: 5pt;
@@ -127,6 +131,7 @@ body {
 .chat-messages-box {
     flex: auto;
     overflow: auto;
+    -webkit-overflow-scrolling: touch;
 }
 
 .chat-input {
@@ -147,30 +152,34 @@ body {
     font: inherit;
 }
 
-.chat-input::-webkit-scrollbar {
-    width: 5pt;
+@supports not (-webkit-overflow-scrolling: touch) {
+    .chat-input::-webkit-scrollbar {
+        width: 5pt;
+    }
+
+    .chat-input::-webkit-scrollbar-track {
+    }
+
+    .chat-input::-webkit-scrollbar-thumb {
+        /*background-color: steelblue;*/
+        background-color: rgb(187, 138, 185);
+        border-radius: 7pt;
+        border: 1pt solid rgba(0, 0, 0, 0);
+        background-clip: padding-box;
+    }
+
+    .chat-messages-box::-webkit-scrollbar {
+        width: 5pt;
+    }
+
+    .chat-messages-box::-webkit-scrollbar-thumb {
+        background-color: rgb(187, 138, 185);
+        border-radius: 7pt;
+        border: 1pt solid rgba(0, 0, 0, 0);
+        background-clip: padding-box;
+    }
 }
 
-.chat-input::-webkit-scrollbar-track {
-}
-
-.chat-input::-webkit-scrollbar-thumb {
-    background-color: steelblue;
-    border-radius: 7pt;
-    border: 1pt solid rgba(0, 0, 0, 0);
-    background-clip: padding-box;
-}
-
-.chat-messages-box::-webkit-scrollbar {
-    width: 5pt;
-}
-
-.chat-messages-box::-webkit-scrollbar-thumb {
-    background-color: steelblue;
-    border-radius: 7pt;
-    border: 1pt solid rgba(0, 0, 0, 0);
-    background-clip: padding-box;
-}
 
 /*.chat-input:before {*/
     /*position: absolute;*/
@@ -355,7 +364,7 @@ body {
 
 .thumbnail {
     vertical-align: middle;
-    border: solid 1px black;
+    /*border: solid 1px black;*/
 }
 
 .chat-panel {
@@ -440,7 +449,8 @@ body {
     left: -7.3em;
     bottom: 1em;
     border: solid black 0.05em;
-    background: rgb(155,181,203);
+    /*background: rgb(155,181,203);*/
+    background: rgb(237, 188, 235);
 }
 
 .smiles-box ul {
@@ -484,4 +494,79 @@ body {
 
 .rtc_phone_cancel {
     color: red;
+}
+
+.screen-wrapper {
+    position: absolute;
+    height: 100%;
+    width: 100%;
+    top:0;
+    left:0;
+}
+
+.call-box-wrapper {
+    position: relative;
+    display: inline-block;
+}
+
+.call-box {
+    position: absolute;
+    left: -7.2em;
+    bottom: 1em;
+    border: solid black 0.05em;
+    /*background: rgb(155,181,203);*/
+    background: rgb(237, 188, 235);
+    width: 10em;
+    padding: 0.2em 1em;
+}
+
+.call-box .row {
+    justify-content: center;
+}
+
+.rtcVideoChatDiv {
+    display: flex;
+    justify-content: center;
+}
+
+.rtcVideoChatDiv video {
+    min-height: 50vw;
+    max-height: 50vw;
+    max-width: 90%;
+    border: 1px solid black;
+}
+
+.chat-map {
+    height: 20vw;
+    width: 40vw;
+    margin: 1em;
+}
+
+@media only screen and (max-width: 600px) {
+    .chat-map {
+        height: 50vw;
+        width: 80vw;
+        margin: 1em;
+    }
+}
+
+@media only screen and (min-width: 601px) and (max-width: 1200px) {
+    .chat-map {
+        height: 35vw;
+        width: 60vw;
+        margin: 1em;
+    }
+}
+
+.center-text {
+    text-align: center;
+}
+
+.celebrate-frame {
+    border: 50px solid transparent;
+    border-image: url("../images/celebrate_border.png") 68 fill;
+}
+
+.msg-system {
+    text-align: center;
 }

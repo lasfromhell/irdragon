@@ -1,12 +1,17 @@
 export default class Utils {
     static processMessage(message) {
         const replaceParams = [];
+        const addedElements = [];
+        const maps = [];
+        let celebrateWrapper = { celebrate: false };
         if (message.indexOf('`') === 0) {
             message = message.replace('`', '');
         }
         else {
+            message = this.replaceMap(message, addedElements, maps);
             message = message.replace(/{file:([a-f0-9-]+);name:(.*?)}/g, '<a href="files/uploaded/$1/$2" download>$2</a>');
             message = message.replace(/{img:([a-f0-9-]+\.[a-z]{3,4})}/g, '<a href="images/uploaded/$1" target="_blank"><img class="thumbnail" src="images/uploaded/thumbnails/$1"/></a>');
+            message = this.replaceCelebrate(message, celebrateWrapper);
             message = message.replace(/(\w{1,10}:\/\/[-a-zA-Z0-9@:%._\+~#=]{2,256}\.[a-z]{2,6}\b[-a-zA-Z0-9@:;%_\+.~#?&//=]*)/g, '<a target="_blank" rel="noopener noreferrer" href="$1">$1</a>');
             message = message.replace(/(:D)|(:=D)|(:-D)|(:d)|(:=d)|(:-d)/g, '<img class="smile" src="images/smiles/01.gif"/>');
             message = message.replace(/(:o)|(:=o)|(:-o)|(:O)|(:=O)|(:-O)/g, '<img class="smile" src="images/smiles/02.gif"/>');
@@ -23,8 +28,44 @@ export default class Utils {
         }
         return {
             message: message,
-            params: replaceParams
+            params: replaceParams,
+            addedElements: addedElements,
+            maps: maps,
+            celebrate: celebrateWrapper.celebrate
         };
+    }
+
+    static replaceCelebrate(message, celebrateWrapper) {
+        const reg = /^{celebrate:(.*)}$/s;
+        const matches = message.trim().match(reg);
+        if (matches) {
+            celebrateWrapper.celebrate = true;
+            return `<div class="celebrate-frame center-text">${matches[1]}</div>`;
+        }
+        celebrateWrapper.celebrate = false;
+        return message;
+    }
+
+    static replaceMap(message, addedElements, maps) {
+        const reg = /{loc:(\d+);(\d+.\d+);(\d+.\d+)}/i;
+        const matches = message.match(reg);
+        if (matches) {
+            const mapId = `map${matches[1]}`;
+            maps.push({id: `map${matches[1]}`});
+
+            const scriptElem = document.createElement('script');
+            scriptElem.setAttribute('type', 'text/javascript');
+            scriptElem.innerHTML =
+                `ymaps.ready(()=>{` +
+                `const map${mapId} = new ymaps.Map("${mapId}", {` +
+                `center: [${matches[2]}, ${matches[3]}],` +
+                `zoom: 16, controls: []` +
+                `});` +
+                `map${mapId}.geoObjects.add(new ymaps.Placemark(map${mapId}.getCenter()));});`;
+            addedElements.push(scriptElem);
+            return this.replaceMap(message.replace(reg, ''));
+        }
+        return message;
     }
 
     static setReplaceParams(replaceParams, match, offset, line, replacer) {

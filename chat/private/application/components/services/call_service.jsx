@@ -9,37 +9,37 @@ export const CALL_STATE_CONNECTED = 'connected';
 export const MEDIA_STATE_NONE = 'none';
 export const MEDIA_STATE_INITIALIZED = 'initialized';
 export const MEDIA_STATE_ERROR = 'error';
-const DEFAULT_ICE_SERVERS = [{url:'stun:stun01.sipphone.com'},
-    {url:'stun:stun.ekiga.net'},
-    {url:'stun:stun.fwdnet.net'},
-    {url:'stun:stun.ideasip.com'},
-    {url:'stun:stun.iptel.org'},
-    {url:'stun:stun.rixtelecom.se'},
-    {url:'stun:stun.schlund.de'},
-    {url:'stun:stun.l.google.com:19302'},
-    {url:'stun:stun1.l.google.com:19302'},
-    {url:'stun:stun2.l.google.com:19302'},
-    {url:'stun:stun3.l.google.com:19302'},
-    {url:'stun:stun4.l.google.com:19302'},
-    {url:'stun:stunserver.org'},
-    {url:'stun:stun.softjoys.com'},
-    {url:'stun:stun.voiparound.com'},
-    {url:'stun:stun.voipbuster.com'},
-    {url:'stun:stun.voipstunt.com'},
-    {url:'stun:stun.voxgratia.org'},
-    {url:'stun:stun.xten.com'},
+const DEFAULT_ICE_SERVERS = [{urls:'stun:stun01.sipphone.com'},
+    {urls:'stun:stun.ekiga.net'},
+    {urls:'stun:stun.fwdnet.net'},
+    {urls:'stun:stun.ideasip.com'},
+    {urls:'stun:stun.iptel.org'},
+    {urls:'stun:stun.rixtelecom.se'},
+    {urls:'stun:stun.schlund.de'},
+    {urls:'stun:stun.l.google.com:19302'},
+    {urls:'stun:stun1.l.google.com:19302'},
+    {urls:'stun:stun2.l.google.com:19302'},
+    {urls:'stun:stun3.l.google.com:19302'},
+    {urls:'stun:stun4.l.google.com:19302'},
+    {urls:'stun:stunserver.org'},
+    {urls:'stun:stun.softjoys.com'},
+    {urls:'stun:stun.voiparound.com'},
+    {urls:'stun:stun.voipbuster.com'},
+    {urls:'stun:stun.voipstunt.com'},
+    {urls:'stun:stun.voxgratia.org'},
+    {urls:'stun:stun.xten.com'},
     {
-        url: 'turn:numb.viagenie.ca',
+        urls: 'turn:numb.viagenie.ca',
         credential: 'muazkh',
         username: 'webrtc@live.com'
     },
     {
-        url: 'turn:192.158.29.39:3478?transport=udp',
+        urls: 'turn:192.158.29.39:3478?transport=udp',
         credential: 'JZEOEt2V3Qb0y27GRntt2u2PAYA=',
         username: '28224511:1379330808'
     },
     {
-        url: 'turn:192.158.29.39:3478?transport=tcp',
+        urls: 'turn:192.158.29.39:3478?transport=tcp',
         credential: 'JZEOEt2V3Qb0y27GRntt2u2PAYA=',
         username: '28224511:1379330808'
     }];
@@ -57,6 +57,7 @@ export default class CallService {
         this.displayName = displayName;
         this.lastCancelledCall = null;
         this.heartBeatInterval = null;
+        this.onNewStream = null;
     }
 
     reset() {
@@ -72,10 +73,20 @@ export default class CallService {
         this.callId = null;
         this.videoAllowed = false;
         this.pc = null;
+        if (this.onNewTrack) {
+            this.onNewTrack(null);
+        }
+        if (this.onNewStream) {
+            this.onNewStream(null);
+        }
     }
 
     setVideoAllowed(allow) {
         this.videoAllowed = allow;
+    }
+
+    isVideoAllowed() {
+        return this.videoAllowed;
     }
 
     setCallState(state) {
@@ -86,17 +97,14 @@ export default class CallService {
     }
 
     isNoneCallState() {
-        return this.callState == CALL_STATE_NONE;
-    }
-
-    getCallState() {
-        return this.callState;
+        return this.callState === CALL_STATE_NONE;
     }
 
     setIncomingData(communications) {
         if (communications && communications.callId) {
             this.communications = communications;
             if (this.callState === CALL_STATE_NONE && communications.state === 'initial' && communications.caller !== this.displayName && this.lastCancelledCall !== communications.callId) {
+                this.videoAllowed = communications.video;
                 this.setCallState(CALL_STATE_INCOMING);
                 this.callId = communications.callId;
                 this.otherPartyDisplayName = communications.caller;
@@ -131,6 +139,16 @@ export default class CallService {
 
     callAction() {
         if (this.mediaState !== MEDIA_STATE_INITIALIZED) {
+            this.log.debug('Enumerating devices...');
+            if (!navigator.mediaDevices) {
+                this.log.debug('navigator.mediaDevices not supported');
+                return;
+            }
+            if (!navigator.mediaDevices.enumerateDevices) {
+                this.log.debug('navigator.mediaDevices.enumerateDevices not supported');
+                return
+            }
+
             navigator.mediaDevices.enumerateDevices().then(devices => {
                 devices.forEach(o => {
                     this.log.debug(`Found available input/output device: ${JSON.stringify(o)}`);
@@ -235,13 +253,22 @@ export default class CallService {
             this.log.info(`RTC connection state changed: ${this.pc.connectionState}`);
         };
         this.pc.ontrack = (e) => {
-            this.log.info(`Track received ${JSON.stringify(e.track)}`);
+            this.log.info(`Track received ${JSON.stringify(e)}`);
             if (pc === this.pc) {
                 if (this.onNewTrack) {
                     this.onNewTrack(e.track);
                 }
             }
         };
+        this.pc.onaddstream = (e) => {
+            this.log.info(`Stream received ${JSON.stringify(e)}`);
+            if (pc === this.pc) {
+                if (this.onNewStream) {
+                    this.onNewStream(e.stream);
+                }
+            }
+        };
+
         this.stream.getTracks().forEach(track => this.pc.addTrack(track, this.stream));
         if (this.callState === CALL_STATE_INCOMING) {
             this.callId = this.communications.callId;
@@ -266,7 +293,7 @@ export default class CallService {
             this.pc.createOffer({}).then((offer) => {
                 this.pc.setLocalDescription(offer);
                 this.log.info('Local SDP: ' + offer.sdp);
-                this.chatProxy.makeCall(this.chatId, this.otherPartyDisplayName, offer)
+                this.chatProxy.makeCall(this.chatId, this.otherPartyDisplayName, this.videoAllowed, offer)
                     .then(r => {
                         this.callId = r.data.callId;
                         if (pc !== this.pc) {

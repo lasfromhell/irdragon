@@ -22,6 +22,7 @@ class RTCCallData
     public $callee;
     public $answerSdp;
     public $answerType;
+    public $video;
 
     /**
      * RTCCallData constructor.
@@ -33,8 +34,9 @@ class RTCCallData
      * @param $callId
      * @param $candidates
      * @param $caller
+     * @param $video
      */
-    public function __construct($chatId, $target, $sdp, $type, $state, $callId, $candidates, $caller)
+    public function __construct($chatId, $target, $sdp, $type, $state, $callId, $candidates, $caller, $video)
     {
         $this->chatId = $chatId;
         $this->target = $target;
@@ -44,5 +46,6 @@ class RTCCallData
         $this->callId = $callId;
         $this->caller = $caller;
         $this->candidates = $candidates;
+        $this->video = $video;
     }
 }

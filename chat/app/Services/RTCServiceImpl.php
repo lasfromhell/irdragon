@@ -38,7 +38,7 @@ class RTCServiceImpl implements RTCService
         $this->cacheService = $cacheService;
     }
 
-    public function assignCall(int $chatId, $target, $sdp, $type, $displayName)
+    public function assignCall(int $chatId, $target, $sdp, $type, $displayName, $video)
     {
         $key = $this->prepareRTCTargetKey($chatId, $target);
         if (!$this->cacheService->exists($key)) {
@@ -51,7 +51,7 @@ class RTCServiceImpl implements RTCService
             $this->cacheService->set($key, $callId, $this::RTC_CALL_TTL);
             $otherPartyKey = $this->prepareRTCTargetKey($chatId, $displayName);
             $this->cacheService->set($otherPartyKey, $callId, $this::RTC_CALL_TTL);
-            $callData = new RTCCallData($chatId, $target, $sdp, $type, $this::STATE_INITIAL, $callId, [], $displayName);
+            $callData = new RTCCallData($chatId, $target, $sdp, $type, $this::STATE_INITIAL, $callId, [], $displayName, $video);
             $this->cacheService->set($callKey, $callData, $this::RTC_CALL_TTL);
             return $callData;
         }

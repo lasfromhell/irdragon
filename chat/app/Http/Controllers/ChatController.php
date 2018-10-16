@@ -121,12 +121,13 @@ class ChatController extends Controller
             $this->validate($request, [
                 'target' => 'required',
                 'sdp' => 'required',
-                'type' => 'required'
+                'type' => 'required',
+                'video' => 'required'
             ]);
         } catch (ValidationException $e) {
             return ResponseUtils::buildErrorResponse($e->getMessage(), 0, 404);
         }
-        $callData = $this->rtcService->assignCall($chatId, $request->target, $request->sdp, $request->type, $userData->displayName);
+        $callData = $this->rtcService->assignCall($chatId, $request->target, $request->sdp, $request->type, $userData->displayName, $request->video);
         return response()->json(['callId' => $callData->callId]);
     }
 

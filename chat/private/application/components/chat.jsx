@@ -9,11 +9,14 @@ import CallService, {
     CALL_STATE_CONNECTED,
     CALL_STATE_INCOMING, CALL_STATE_INCOMING_CALLING
 } from "./services/call_service";
+import {Celebrate} from "./celebrate";
 
 const uuidv1 = require('uuid/v1');
 
 const TYPING_OFFSET_MS = 3000;
 const TYPING_REFRESH_SEND_OFFSET_MS = 3000;
+const DIALOG_SMILES = 'smiles';
+const DIALOG_CALL_TO = 'call_to';
 
 export default class Chat extends React.Component {
 
@@ -27,7 +30,8 @@ export default class Chat extends React.Component {
             data: '',
             serverError: false,
             headerMessage: '',
-            smilesDisplayed: false
+            activeDialog: null,
+            videoCall: false
         };
         this.chatId = this.props.userData.chats[0];
 
@@ -65,6 +69,7 @@ export default class Chat extends React.Component {
             end: 0
         };
         this.lastActiveDate = 0;
+        this.presenceTargets = [];
 
         this.loadChatSize();
 
@@ -83,37 +88,65 @@ export default class Chat extends React.Component {
 
     initializeCallService() {
         this.callService = new CallService(this.log, this.chatProxy, this.chatId, this.props.userData.displayName);
-        this.callService.onNewTrack = (track, earpiece) => {
-            if (this.refs.remoteVideo.srcObject) {
+        this.callService.onNewTrack = (track) => {
+            this.log.debug(`OnNewTrack called`);
+            if (track == null) {
+                this.refs.remotePlayer.srcObject = null;
+                this.setState({
+                    hasVideoTrackInCall: false
+                });
+                return;
+            }
+            if (track.kind === 'video') {
+                this.setState({
+                    hasVideoTrackInCall: true
+                });
+                this.onScrollChatToBottom();
+            }
+            if (this.refs.remotePlayer.srcObject && this.refs.remotePlayer.srcObject.addTrack && this.refs.remotePlayer.srcObject instanceof MediaStream) {
                 this.log.debug(`Adding track ${JSON.stringify(track)}`);
-                this.refs.remoteVideo.srcObject.addTrack(track);
+                this.refs.remotePlayer.srcObject.addTrack(track);
+            }
+            else if (!this.refs.remotePlayer.srcObject) {
+                this.log.debug(`Current sink id is ${this.refs.remotePlayer.sinkId}`);
+                // try {
+                //     this.refs.remotePlayer.srcObject = stream;
+                // } catch (e) {
+                //     this.log.debug(`Looks like I can't add track in safari`);
+                // }
+                try {
+                    const mediaStream = new MediaStream();
+                    mediaStream.addTrack(track);
+                    this.refs.remotePlayer.srcObject = mediaStream;
+                    this.log.debug(`Browser stream assigned`);
+                } catch (e) {
+                    this.log.debug(`Looks like I can't add track as media stream in this browser`);
+                }
+            }
+        };
+        this.callService.onNewStream = (stream) => {
+            this.log.debug(`OnNewStream called`);
+            if (this.isSafari()) {
+                this.refs.remotePlayer.srcObject = stream;
             }
             else {
-                const mediaStream = new MediaStream();
-                this.log.debug(`Current sink id is ${this.refs.remoteVideo.sinkId}`);
-                // this.log.debug(`Creating new media stream with first track ${JSON.stringify(track)}. Earpiece: ${earpiece}`);
-                // if (earpiece) {
-                //     this.log.debug(`Earpiece found. Setting sink id ${earpiece.deviceId}`);
-                //     try {
-                //         this.refs.remoteVideo.setSinkId(earpiece.deviceId)
-                //             .then(() => {
-                //                 this.log.debug(`Sink attached ${earpiece.deviceId}`);
-                //             }).catch(e => {
-                //             this.log.error(`Unable to attach sink ${earpiece.deviceId}`);
-                //         });
-                //     } catch (e) {
-                //         this.log.error(`Setting sink id failed ${e.message}`);
-                //     }
-                // }
-                mediaStream.addTrack(track);
-                this.refs.remoteVideo.srcObject = mediaStream;
+                this.log.debug(`Not safari. Skipping onNewStream...`);
             }
         };
         this.callService.onCallStateChanged = (newState) => {
+            this.refs.rtcVideoCheckbox.checked = this.callService.isVideoAllowed();
             this.setState({
-                callState: newState
+                callState: newState,
+                videoCall: this.callService.isVideoAllowed()
             });
+            if (this.state.activeDialog === DIALOG_CALL_TO) {
+                this.onScreenWrapper();
+            }
         }
+    }
+
+    isSafari() {
+        return /^((?!chrome|android|crios|fxios).)*safari/i.test(navigator.userAgent);
     }
 
     startMessagesGathering() {
@@ -370,6 +403,7 @@ export default class Chat extends React.Component {
 
     componentDidMount() {
         Chat.scrollToBottom(this.refs.chatMessagesBox);
+        new Celebrate().startCelebrate();
     }
 
     componentDidUpdate() {
@@ -392,6 +426,7 @@ export default class Chat extends React.Component {
     }
 
     handleMessageBoxScroll() {
+
         this.loadPreviousMessages();
         if (this.refs.chatMessagesBox.scrollTop + this.refs.chatMessagesBox.offsetHeight >= this.refs.chatMessagesBox.scrollHeight) {
             this.scrolledToBottom = true;
@@ -402,14 +437,18 @@ export default class Chat extends React.Component {
     }
 
     loadPreviousMessages() {
-        if (this.refs.chatMessagesBox.scrollTop / this.refs.chatMessagesBox.scrollHeight < 0.1 && !this.fullHistoryLoaded
+        if (this.refs.chatMessagesBox.scrollTop / this.refs.chatMessagesBox.scrollHeight < 0.1 && this.refs.chatMessagesBox.scrollTop < 100 && !this.fullHistoryLoaded
                 && !this.historyLoading) {
-            this.historyLoading = true;
-            let wasScrolled = false;
-            if (!this.refs.chatMessagesBox.scrollTop) {
-                this.refs.chatMessagesBox.scrollTop++;
-                wasScrolled = true;
+            // let wasScrolled = false;
+            // if (!this.refs.chatMessagesBox.scrollTop) {
+            //     this.refs.chatMessagesBox.scrollTop++;
+            //     wasScrolled = true;
+            // }
+            if (this.scrollUpInProgress) {
+                return;
             }
+            this.historyLoading = true;
+            const scrollDiff = this.refs.chatMessagesBox.scrollHeight - this.refs.chatMessagesBox.scrollTop;
             this.chatProxy.getMessagesBefore(this.chatId, this.firstId, 30)
                 .then(response => {
                     this.updateTyping(response.data.typing);
@@ -422,13 +461,14 @@ export default class Chat extends React.Component {
                     }
                     this.setStateMessages(response.data.messages, response.data.last_read_message);
                     this.firstId = response.data.messages[0].id;
-                    setTimeout(this.loadPreviousMessages.bind(this), 1000);
+                    this.refs.chatMessagesBox.scrollTop = this.refs.chatMessagesBox.scrollHeight - scrollDiff;
+                    // setTimeout(this.loadPreviousMessages.bind(this), 1000);
                 })
                 .finally(() => {
                     this.historyLoading = false;
-                    if (wasScrolled) {
-                        this.refs.chatMessagesBox.scrollTop--;
-                    }
+                    // if (wasScrolled) {
+                    //     this.refs.chatMessagesBox.scrollTop--;
+                    // }
                 })
         }
     }
@@ -498,15 +538,19 @@ export default class Chat extends React.Component {
     }
 
     onServerError() {
-        this.setState({
-            serverError: true
-        });
+        if (!this.state.serverError) {
+            this.setState({
+                serverError: true
+            });
+        }
     }
 
     onServerSuccess() {
-        this.setState({
-            serverError: false
-        });
+        if (this.state.serverError) {
+            this.setState({
+                serverError: false
+            });
+        }
     }
 
     onFullScreen() {
@@ -642,13 +686,13 @@ export default class Chat extends React.Component {
 
     onSmilesClick() {
         this.setState({
-            smilesDisplayed: !this.state.smilesDisplayed
+            activeDialog: DIALOG_SMILES,
         });
     }
 
     onSmileClick(data) {
         this.appendToCurrentInputPos(data);
-        this.onSmilesClick();
+        this.onScreenWrapper();
         this.refs.chatInput.focus();
     }
 
@@ -669,31 +713,62 @@ export default class Chat extends React.Component {
         this.log.download();
     }
 
-    onCallClick() {
+    onCallButtonClick() {
         if (this.callService.isNoneCallState()) {
+            this.presenceTargets = [];
             const presence = this.presenceObservable.getValue();
-            let otherPartyFound = false;
             for (let key in presence) {
-                const online = presence[key].online;
-                if (online) {
-                    if (online.displayName !== this.props.userData.displayName) {
-                        this.callService.setOtherParty(online.displayName);
-                        otherPartyFound = true;
-                        break;
-                    }
+                const presenceItem = presence[key];
+                if (presenceItem.action && presenceItem.action.displayName !== this.props.userData.displayName) {
+                    this.presenceTargets.push(presenceItem.action.displayName);
                 }
             }
-            if (otherPartyFound) {
-                this.callService.callAction();
-            }
+            this.setState({
+                activeDialog: DIALOG_CALL_TO
+            })
         }
         else {
             this.callService.callAction();
         }
     }
 
+    onCallClick() {
+        this.log.debug('Call clicked');
+        if (this.callService.isNoneCallState()) {
+            this.log.debug('Call Service is in none call state');
+            if (this.refs.rtcTarget.value) {
+                this.log.debug('RTC Target is ' + this.refs.rtcTarget.value);
+                this.callService.setVideoAllowed(this.refs.rtcVideoCheckbox.checked);
+                this.callService.setOtherParty(this.refs.rtcTarget.value);
+                this.callService.callAction();
+            }
+        }
+        this.onScreenWrapper();
+    }
+
     onWindowBeforeUnload() {
         this.callService.cancelCall(true);
+    }
+
+    onScreenWrapper() {
+        this.setState({
+            activeDialog: null
+        });
+    }
+
+    onVideoCheckboxClick() {
+        this.setState({
+            videoCall: this.refs.rtcVideoCheckbox.checked
+        })
+    }
+
+    onLocateClick() {
+        navigator.geolocation.getCurrentPosition((position => {
+            const id = Math.round(Math.random()*10000000000000000);
+            this.refs.chatInput.value += ` {loc:${id};${position.coords.latitude};${position.coords.longitude}} `;
+        }), err => {
+            this.log.error("Unable to get geoposition. " + err.message);
+        })
     }
 
     // onInputChange(e) {
@@ -743,17 +818,46 @@ export default class Chat extends React.Component {
 
     render() {
         return <div className={"chat-box" + (this.state.serverError ? " chat-box-error" : "")} ref="chatBox">
+            <div className={"screen-wrapper " + (this.state.activeDialog !== null ? "" : " hidden")} onClick={this.onScreenWrapper.bind(this)}/>
             <ChatMenu onLogout={this.onLogout.bind(this)} chatProxy={this.chatProxy} headerMessage={this.state.headerMessage} observables={this.observables} control={this.control}/>
             <div className="chat-messages-box" ref="chatMessagesBox" onScroll={this.handleMessageBoxScroll.bind(this)} onWheel={this.handleWheel.bind(this)}>
                 {this.state.messages.map((value, key) => <ChatMessage id={'cm_' + key} key={key} message={value} userData={this.props.userData} lastActiveDate={this.lastActiveDate}/>)}
                 {this.state.proposedMessages.map((value, key) => <ChatMessage id={'propcm_' + key} key={key} message={value} userData={this.props.userData} lastActiveDate={this.lastActiveDate}/>)}
                 {/*{<ChatMessage id='preview-message' message={this.refs.chatInput.value} userData={this.props.userData}/>}*/}
+                {this.state.videoCall ?
+                    <div className="rtcVideoChatDiv">
+                        <video ref="remotePlayer" autoPlay playsinline className={this.state.hasVideoTrackInCall ? "" : "hidden"}/>
+                    </div>
+                    :
+                    <audio ref="remotePlayer" autoPlay controls className="hidden"/>
+                }
             </div>
-            <audio ref="remoteVideo" autoPlay="autoPlay"></audio>
             <div className="chat-panel">
                 <div className="chat-typing-area" ref="typingArea"><span className="chat-typing-text" ref="typingText"/></div>
                 <div className="chat-panel-menu">
-                    <i className={"panel-awesome-default fas fa-phone" + this.getCallStateClass()} onClick={this.onCallClick.bind(this)}/>
+                    <i className={"panel-awesome-default fas fa-map-marked"} onClick={this.onLocateClick.bind(this)}/>
+                    <i className={"panel-awesome-default " +
+                        (this.state.videoCall ? "fas fa-video" : "fas fa-phone") +
+                        this.getCallStateClass() + (this.state.activeDialog === DIALOG_CALL_TO ? " panel-awesome-selected" : "")} onClick={this.onCallButtonClick.bind(this)}/>
+                    <div className={(this.state.activeDialog === DIALOG_CALL_TO ? "call-box-wrapper" : "hidden")}>
+                        <div className="call-box">
+                            <div className="row">
+                                <label htmlFor="rtcTarget">To:</label>
+                                <select ref="rtcTarget" id="rtcTarget">
+                                    {this.presenceTargets.map((value) => <option key={value}>{value}</option>)}
+                                </select>
+                            </div>
+                            <div className="row">
+                                <label htmlFor="rtcVideoCheckbox">Video:</label>
+                                <div>
+                                    <input type="checkbox" ref="rtcVideoCheckbox" id="rtcVideoCheckbox" onClick={this.onVideoCheckboxClick.bind(this)}/>
+                                </div>
+                            </div>
+                            <div className="row">
+                                <button onClick={this.onCallClick.bind(this)} className="form-submit-btn">Call</button>
+                            </div>
+                        </div>
+                    </div>
                     <i className={"panel-awesome-default fas fa-notes-medical"} onClick={this.onDownloadLogs.bind(this)}/>
                     <label htmlFor="imageInput">
                         <i className={"panel-awesome-default far fa-image"}/>
@@ -763,8 +867,8 @@ export default class Chat extends React.Component {
                         <i className={"panel-awesome-default far fa-file"}/>
                     </label>
                     <input type="file" id="fileInput" ref="fileUploadInput" className="hidden" multiple onChange={this.onInputFileSelected.bind(this)}/>
-                    <i className={"panel-awesome-default far fa-smile " + (this.state.smilesDisplayed ? "panel-awesome-selected" : "")} onClick={this.onSmilesClick.bind(this)} />
-                    <div className={(this.state.smilesDisplayed ? "smiles-box-wrapper" : "hidden")}>
+                    <i className={"panel-awesome-default far fa-smile " + (this.state.activeDialog === DIALOG_SMILES ? "panel-awesome-selected" : "")} onClick={this.onSmilesClick.bind(this)} />
+                    <div className={(this.state.activeDialog === DIALOG_SMILES ? "smiles-box-wrapper" : "hidden")}>
                         <div className="smiles-box">
                             <ul>
                                 <li><img className="smile" src="images/smiles/01.gif" onClick={() => this.onSmileClick(":D")}/></li>
@@ -793,8 +897,7 @@ export default class Chat extends React.Component {
             </div>
             {/*<div className="chat-input" ref="chatInput" onKeyPress={this.handleInputKeyPress.bind(this) } onMouseUp={this.onInputMouseUp.bind(this)} onDrop={this.onInputDrop.bind(this)} onPaste={this.onInputPaste.bind(this)} onInput={this.onInputChange.bind(this)}/>*/}
             <textarea className="chat-input" ref="chatInput" onKeyPress={this.handleInputKeyPress.bind(this) } onDrop={this.onInputDrop.bind(this)} onPaste={this.onInputPaste.bind(this)}/>
-
         </div>;
     }
-}
+};
 

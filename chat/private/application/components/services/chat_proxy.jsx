@@ -103,11 +103,12 @@ export default class ChatProxy {
         });
     }
 
-    makeCall(chatId, dst, offer) {
+    makeCall(chatId, dst, video, offer) {
         return this.axios.post(`/api/chat/${chatId}/rtc/call`, {
             target: dst,
             sdp: offer.sdp,
-            type: offer.type
+            type: offer.type,
+            video: video
         });
     }
 

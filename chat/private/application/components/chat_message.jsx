@@ -6,11 +6,29 @@ import DeviceService from "./services/device_service";
 export default class ChatMessage extends React.Component {
     constructor(props) {
         super(props);
+        this.messageData = null;
+    }
+    componentDidMount() {
+        if (this.messageData.addedElements.length > 0) {
+            setTimeout(() => {
+                this.messageData.addedElements.forEach(v => {
+                    document.body.appendChild(v);
+                });
+            }, 0);
+        }
+    }
+
+    getPositionClass(messageData) {
+        if (messageData.celebrate) {
+            return "msg-system";
+        }
+        return this.props.message.from === this.props.userData.displayName ? "msg-mine" : "msg-yours";
     }
 
     render() {
         let deviceUISubClass = DeviceService.getDeviceUISubClass(this.props.message.device);
-        return <div className={"chat-msg " + (this.props.message.from === this.props.userData.displayName ? "msg-mine" : "msg-yours")} id={this.props.id}>
+        this.messageData = Utils.processMessage(this.props.message.message);
+        return <div className={"chat-msg " + this.getPositionClass(this.messageData)} id={this.props.id}>
                 <div className="chat-msg-header"><span className="chat-time">{Chat.formatDate(new Date(this.props.message.date * 1000))}</span><span
                     className="chat-author">{this.props.message.from}</span>
                     <div className={"message-device"}>
@@ -25,7 +43,9 @@ export default class ChatMessage extends React.Component {
                     (this.props.message.animateNew ? ' chat-msg-new-animation' : "") +
                     (Utils.isMultiline(this.props.message.message) ? " chat-msg-multiline" : "") +
                     (this.props.message.date > this.props.lastActiveDate && this.props.message.from === this.props.userData.displayName ? " chat-msg-unread" : "")
-                }><span className="chat-msg-text" dangerouslySetInnerHTML={{__html: Utils.processMessage(this.props.message.message).message}}/></div>
+                }><span className="chat-msg-text" dangerouslySetInnerHTML={{__html: this.messageData.message.trim()}}/>
+                    {this.messageData.maps.map(v => <div className="chat-map" key={v.id} id={v.id}/>)}
+                </div>
             </div>;
     }
 }
