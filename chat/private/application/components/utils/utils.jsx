@@ -173,4 +173,8 @@ export default class Utils {
         }
         return element.textContent.length;
     }
+
+    static isSafari() {
+        return /^((?!chrome|android|crios|fxios).)*safari/i.test(navigator.userAgent);
+    }
 }

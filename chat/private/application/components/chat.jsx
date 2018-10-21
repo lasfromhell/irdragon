@@ -10,6 +10,7 @@ import CallService, {
     CALL_STATE_INCOMING, CALL_STATE_INCOMING_CALLING
 } from "./services/call_service";
 import {Celebrate} from "./celebrate";
+import Utils from "./utils/utils";
 
 const uuidv1 = require('uuid/v1');
 
@@ -22,7 +23,6 @@ export default class Chat extends React.Component {
 
     constructor(props) {
         super(props);
-        this.a = 0;
         this.log = props.log;
         this.state = {
             messages: new SortedMap(),
@@ -48,8 +48,8 @@ export default class Chat extends React.Component {
 
         this.messageGatheringStopped = false;
         this.messsageGatheringTimeout = null;
-        this.presenceGatheringStopped = false;
-        this.presenceGatheringInterval = null;
+        // this.presenceGatheringStopped = false;
+        // this.presenceGatheringInterval = null;
         this.chatProxy = props.chatProxy;
         this.chatProxy.setGoToHomeCallback(this.onLogout.bind(this));
         this.chatProxy.setErrorCallback(this.onServerError.bind(this));
@@ -63,18 +63,18 @@ export default class Chat extends React.Component {
             fullScreen: this.onFullScreen.bind(this)
         };
         this.scrolledToBottom = true;
-        this.messageText = '';
-        this.messageTextPreviousPosition = {
-            start: 0,
-            end: 0
-        };
+        // this.messageText = '';
+        // this.messageTextPreviousPosition = {
+        //     start: 0,
+        //     end: 0
+        // };
         this.lastActiveDate = 0;
         this.presenceTargets = [];
 
         this.loadChatSize();
 
         this.startMessagesGathering();
-        this.startPresenceGathering();
+        // this.startPresenceGathering();
         this.initializeCallService();
 
         window.addEventListener('focus', this.onWindowActive.bind(this));
@@ -126,7 +126,7 @@ export default class Chat extends React.Component {
         };
         this.callService.onNewStream = (stream) => {
             this.log.debug(`OnNewStream called`);
-            if (this.isSafari()) {
+            if (Utils.isSafari()) {
                 this.refs.remotePlayer.srcObject = stream;
             }
             else {
@@ -145,9 +145,7 @@ export default class Chat extends React.Component {
         }
     }
 
-    isSafari() {
-        return /^((?!chrome|android|crios|fxios).)*safari/i.test(navigator.userAgent);
-    }
+
 
     startMessagesGathering() {
             this.chatProxy.getLatestMessages(this.chatId).then(response => {
@@ -198,6 +196,9 @@ export default class Chat extends React.Component {
                 }
                 const communicationBlock = response.data.communications;
                 this.callService.setIncomingData(communicationBlock);
+                if (response.data.presence) {
+                    this.handlePresence(response.data.presence);
+                }
             })
             .catch(error => {
                 console.error('Unable to get latest messages', error);
@@ -221,7 +222,7 @@ export default class Chat extends React.Component {
         else {
             this.setStateMessages(messages, lastReadMessage);
         }
-        Chat.scrollToBottom(this.refs.chatMessagesBox);
+        this.scrollToBottom(this.refs.chatMessagesBox);
         if (modifyLatestId) {
             this.latestId = messages[messages.length - 1].id;//this.state.messages.max().id;
         }
@@ -258,36 +259,40 @@ export default class Chat extends React.Component {
         this.setState({proposedMessages: this.state.proposedMessages});
     }
 
-    startPresenceGathering() {
-        const gatheringFunc = () => {
-            if (this.presenceGatheringStopped) {
-                clearInterval(this.presenceGatheringInterval);
-                return;
-            }
-            this.chatProxy.getPresence(this.chatId).then(response => {
-                    this.log.debug('Presence received:');
-                    for (const line in response.data) {
-                        if (response.data.hasOwnProperty(line)) {
-                            if (response.data[line] != null) {
-                                const presenceItem = response.data[line];
-                                if (presenceItem.action && this.lastActiveDate < presenceItem.action.activityDate &&
-                                    presenceItem.action.displayName !== this.props.userData.displayName) {
-                                    this.lastActiveDate = presenceItem.action.activityDate;
-                                }
-                                this.log.debug(`Action: ${Chat.presenceItemToString(presenceItem.action)}` +
-                                    `; Online: ${Chat.presenceItemToString(presenceItem.online)}`);
-                            }
-                        }
+    handlePresence(presence) {
+        this.log.debug('Presence received:');
+        for (const line in presence) {
+            if (presence.hasOwnProperty(line)) {
+                if (presence[line] != null) {
+                    const presenceItem = presence[line];
+                    if (presenceItem.action && this.lastActiveDate < presenceItem.action.activityDate &&
+                        presenceItem.action.displayName !== this.props.userData.displayName) {
+                        this.lastActiveDate = presenceItem.action.activityDate;
                     }
-                    this.presenceObservable.next(response.data);
-                })
-                .catch(e => {
-                    console.log(e);
-                });
-        };
-        gatheringFunc();
-        this.presenceGatheringInterval = setInterval(gatheringFunc, 3000);
+                    this.log.debug(`Action: ${Chat.presenceItemToString(presenceItem.action)}` +
+                        `; Online: ${Chat.presenceItemToString(presenceItem.online)}`);
+                }
+            }
+        }
+        this.presenceObservable.next(presence);
     }
+
+    // startPresenceGathering() {
+    //     const gatheringFunc = () => {
+    //         if (this.presenceGatheringStopped) {
+    //             clearInterval(this.presenceGatheringInterval);
+    //             return;
+    //         }
+    //         this.chatProxy.getPresence(this.chatId).then(response => {
+    //
+    //             })
+    //             .catch(e => {
+    //                 console.log(e);
+    //             });
+    //     };
+    //     gatheringFunc();
+    //     this.presenceGatheringInterval = setInterval(gatheringFunc, 3000);
+    // }
 
     static presenceItemToString(presenceItem) {
         return presenceItem ? `${presenceItem.displayName}: ${new Date(presenceItem.activityDate * 1000)}` : '';
@@ -308,7 +313,7 @@ export default class Chat extends React.Component {
                 this.refs.chatInput.selectionStart = selStart + 1;
                 this.refs.chatInput.selectionEnd = selStart + 1;
                 if (lastStrPart.indexOf('\n') === -1) {
-                    Chat.scrollToBottom(this.refs.chatInput);
+                    this.scrollToBottom(this.refs.chatInput);
                 }
             }
         }
@@ -402,14 +407,14 @@ export default class Chat extends React.Component {
     }
 
     componentDidMount() {
-        Chat.scrollToBottom(this.refs.chatMessagesBox);
+        this.scrollToBottom(this.refs.chatMessagesBox);
         new Celebrate().startCelebrate();
     }
 
     componentDidUpdate() {
     }
 
-    static scrollToBottom(element) {
+    scrollToBottom(element) {
         element.scrollTop = element.scrollHeight;
         this.scrolledToBottom = true;
     }
@@ -439,11 +444,6 @@ export default class Chat extends React.Component {
     loadPreviousMessages() {
         if (this.refs.chatMessagesBox.scrollTop / this.refs.chatMessagesBox.scrollHeight < 0.1 && this.refs.chatMessagesBox.scrollTop < 100 && !this.fullHistoryLoaded
                 && !this.historyLoading) {
-            // let wasScrolled = false;
-            // if (!this.refs.chatMessagesBox.scrollTop) {
-            //     this.refs.chatMessagesBox.scrollTop++;
-            //     wasScrolled = true;
-            // }
             if (this.scrollUpInProgress) {
                 return;
             }
@@ -462,13 +462,9 @@ export default class Chat extends React.Component {
                     this.setStateMessages(response.data.messages, response.data.last_read_message);
                     this.firstId = response.data.messages[0].id;
                     this.refs.chatMessagesBox.scrollTop = this.refs.chatMessagesBox.scrollHeight - scrollDiff;
-                    // setTimeout(this.loadPreviousMessages.bind(this), 1000);
                 })
                 .finally(() => {
                     this.historyLoading = false;
-                    // if (wasScrolled) {
-                    //     this.refs.chatMessagesBox.scrollTop--;
-                    // }
                 })
         }
     }
@@ -519,10 +515,6 @@ export default class Chat extends React.Component {
             clearTimeout(this.messsageGatheringTimeout);
         }
         this.messageGatheringStopped = true;
-        if (this.presenceGatheringInterval) {
-            clearInterval(this.presenceGatheringInterval);
-        }
-        this.presenceGatheringStopped = true;
     }
 
     onLogout () {
@@ -681,7 +673,7 @@ export default class Chat extends React.Component {
     }
 
     onScrollChatToBottom() {
-        Chat.scrollToBottom(this.refs.chatMessagesBox);
+        this.scrollToBottom(this.refs.chatMessagesBox);
     }
 
     onSmilesClick() {

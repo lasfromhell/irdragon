@@ -30,18 +30,34 @@ class PresenceServiceImpl implements PresenceService
     }
 
     public function updateOnlineDate($userId, $displayName, $device) {
-        $this->cacheService->set(self::PRESENCE . $userId, new PresenceItem(Carbon::now()->timestamp, $displayName, $device), $this->LATEST_TTL);
+        $key = self::PRESENCE . $userId;
+        $this->cacheService->mutex($key)->synchronized(function () use ($userId, $displayName, $device, $key) {
+            $this->cacheService->set($key, new PresenceItem(Carbon::now()->timestamp, $displayName, $device), $this->LATEST_TTL);
+        });
     }
 
     public function getOnlineDate($userId) {
-        return $this->cacheService->get(self::PRESENCE . $userId);
+        $key = self::PRESENCE . $userId;
+        $result = null;
+        $this->cacheService->mutex($key)->synchronized(function () use ($userId, $key, &$result) {
+            $result = $this->cacheService->get(self::PRESENCE . $userId);
+        });
+        return $result;
     }
 
     public function updateActionDate($userId, $displayName, $device) {
-        $this->cacheService->set(self::PRESENCE_ACTION . $userId, new PresenceItem(Carbon::now()->timestamp, $displayName, $device), $this->LATEST_TTL);
+        $key = self::PRESENCE_ACTION . $userId;
+        $this->cacheService->mutex($key)->synchronized(function () use ($userId, $displayName, $device, $key) {
+            $this->cacheService->set($key, new PresenceItem(Carbon::now()->timestamp, $displayName, $device), $this->LATEST_TTL);
+        });
     }
 
     public function getActionDate($userId) {
-        return $this->cacheService->get(self::PRESENCE_ACTION . $userId);
+        $key = self::PRESENCE_ACTION . $userId;
+        $result = null;
+        $this->cacheService->mutex($key)->synchronized(function () use ($userId, $key, &$result) {
+            $result = $this->cacheService->get(self::PRESENCE_ACTION . $userId);
+        });
+        return $result;
     }
 }

@@ -13,16 +13,18 @@ class CommunicationData
 {
     public $messages;
     public $communications;
+    public $presence;
 
     /**
      * CommunicationData constructor.
      * @param $messages
      * @param $communications
      */
-    public function __construct($messages, $communications)
+    public function __construct($messages, $communications, $presence)
     {
         $this->messages = $messages;
         $this->communications = $communications;
+        $this->presence = $presence;
     }
 
 

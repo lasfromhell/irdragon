@@ -24,7 +24,7 @@ export default class Base extends React.Component {
         document.addEventListener('keypress', this.onKeyPress.bind(this));
         document.addEventListener('mousemove', this.onMouseMove.bind(this));
         window.addEventListener('focus', this.onFocus.bind(this));
-        setInterval(this.updateActivityByTimer.bind(this) ,3000)
+        setInterval(this.updateActivityByTimer.bind(this), 1000)
     }
 
     detectMobile() {
@@ -83,8 +83,7 @@ export default class Base extends React.Component {
             return;
         }
         const currentActivity = new Date().getTime();
-        if (currentActivity - this.lastActivity > 5000) {
-
+        if (currentActivity - this.lastActivity > 1000) {
             this.chatProxy.sendAction();
             this.lastActivity = currentActivity;
         }

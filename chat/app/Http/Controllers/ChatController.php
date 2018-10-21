@@ -74,7 +74,18 @@ class ChatController extends Controller
         if (!$this->checkUserChat($chatId, $userData)) {
             return ResponseUtils::buildAccessDenied();
         }
-        return response()->json(new CommunicationData($this->messageService->getLastMessagesAfterDB($chatId, $userData->id, $after, $number), $this->rtcService->getCall($chatId, $userData->displayName)));
+        $this->userService->getChatUsers($chatId)->each(function($uc) use (&$userDates) {
+            $userOnlineDate = $this->presenceService->getOnlineDate($uc->user_id);
+            $userActionDate = $this->presenceService->getActionDate($uc->user_id);
+            if ($userOnlineDate || $userActionDate) {
+                $userDates[$uc->user_id] = new PresenceData($userOnlineDate, $userActionDate);
+            }
+        });
+        return response()->json(new CommunicationData(
+            $this->messageService->getLastMessagesAfterDB($chatId, $userData->id, $after, $number),
+            $this->rtcService->getCall($chatId, $userData->displayName),
+            $userDates
+        ));
     }
 
     public function getMessagesBefore(int $chatId, $before, Request $request, int $number = 50) {
@@ -83,15 +94,6 @@ class ChatController extends Controller
             return ResponseUtils::buildAccessDenied();
         }
         return response()->json($this->messageService->getLastMessagesBeforeDB($chatId, $userData->id, $before, $number));
-    }
-
-    public function getPresence(int $chatId) {
-        $userDates = array();
-        $this->userService->getChatUsers($chatId)->each(function($uc) use (&$userDates) {
-            $userDates[$uc->user_id] =
-                new PresenceData($this->presenceService->getOnlineDate($uc->user_id), $this->presenceService->getActionDate($uc->user_id));
-        });
-        return response()->json($userDates);
     }
 
     public function typingStarted(int $chatId, Request $request) {
