@@ -146,4 +146,22 @@ export default class ChatProxy {
             callId: callId
         });
     }
+
+    subscribeNotifications(chatId, subscription, type) {
+        return this.axios.post(`/api/chat/${chatId}/notification/subscribe`, {
+            subscription,
+            type
+        });
+    }
+
+    unsubscribeNotifications(chatId, subscription, type) {
+        return this.axios.post(`/api/chat/${chatId}/notification/unsubscribe`, {
+            subscription,
+            type
+        });
+    }
+
+    getNotificationsSubscriptionTypes(chatId, subscription) {
+        return this.axios.post(`/api/chat/${chatId}/notification/subscriptionTypes`, {subscription});
+    }
 }

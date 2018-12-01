@@ -10,7 +10,7 @@ export default class Utils {
         else {
             message = this.replaceMap(message, addedElements, maps);
             message = message.replace(/{file:([a-f0-9-]+);name:(.*?)}/g, '<a href="files/uploaded/$1/$2" download>$2</a>');
-            message = message.replace(/{img:([a-f0-9-]+\.[a-z]{3,4})}/g, '<a href="images/uploaded/$1" target="_blank"><img class="thumbnail" src="images/uploaded/thumbnails/$1"/></a>');
+            message = message.replace(/{img:([a-f0-9-]+\.[a-zA-Z]{3,4})}/g, '<a href="images/uploaded/$1" target="_blank"><img class="thumbnail" src="images/uploaded/thumbnails/$1"/></a>');
             message = this.replaceCelebrate(message, celebrateWrapper);
             message = message.replace(/(\w{1,10}:\/\/[-a-zA-Z0-9@:%._\+~#=]{2,256}\.[a-z]{2,6}\b[-a-zA-Z0-9@:;%_\+.~#?&//=]*)/g, '<a target="_blank" rel="noopener noreferrer" href="$1">$1</a>');
             message = message.replace(/(:D)|(:=D)|(:-D)|(:d)|(:=d)|(:-d)/g, '<img class="smile" src="images/smiles/01.gif"/>');
@@ -36,7 +36,7 @@ export default class Utils {
     }
 
     static replaceCelebrate(message, celebrateWrapper) {
-        const reg = /^{celebrate:(.*)}$/s;
+        const reg = /^{celebrate:([\s\S]*)}$/;
         const matches = message.trim().match(reg);
         if (matches) {
             celebrateWrapper.celebrate = true;
@@ -176,5 +176,24 @@ export default class Utils {
 
     static isSafari() {
         return /^((?!chrome|android|crios|fxios).)*safari/i.test(navigator.userAgent);
+    }
+
+    static urlBase64ToUint8Array(base64String) {
+        const padding = '='.repeat((4 - base64String.length % 4) % 4);
+        const base64 = (base64String + padding)
+            .replace(/-/g, '+')
+            .replace(/_/g, '/');
+
+        const rawData = window.atob(base64);
+        const outputArray = new Uint8Array(rawData.length);
+
+        for (let i = 0; i < rawData.length; ++i) {
+            outputArray[i] = rawData.charCodeAt(i);
+        }
+        return outputArray;
+    }
+
+    static checkIfBrowserSupportsNotifications() {
+        return ('serviceWorker' in navigator) && ('PushManager' in window);
     }
 }

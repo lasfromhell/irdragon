@@ -9,6 +9,7 @@
 namespace App\Http\Controllers;
 
 use App\Contracts\MessageService;
+use App\Contracts\NotificationService;
 use App\Contracts\PresenceService;
 use App\Contracts\RTCService;
 use App\Contracts\SessionService;
@@ -19,7 +20,9 @@ use App\Http\Models\SendMessageData;
 use App\Services\ResponseUtils;
 use App\Services\Utils;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\ValidationException;
+use Mockery\Matcher\Not;
 
 class ChatController extends Controller
 {
@@ -28,15 +31,21 @@ class ChatController extends Controller
     protected $sessionService;
     protected $presenceService;
     protected $rtcService;
+    /**
+     * @var NotificationService
+     */
+    private $notificationService;
+
 
     function __construct(UserService $userService, MessageService $messageService, SessionService $sessionService,
-                         PresenceService $presenceService, RTCService $rtcService)
+                         PresenceService $presenceService, RTCService $rtcService, NotificationService $notificationService)
     {
         $this->userService = $userService;
         $this->messageService = $messageService;
         $this->sessionService = $sessionService;
         $this->presenceService = $presenceService;
         $this->rtcService = $rtcService;
+        $this->notificationService = $notificationService;
     }
 
     public function sendMessage(int $chatId, Request $request) {
@@ -57,6 +66,11 @@ class ChatController extends Controller
             $messageId = $this->messageService->addMessage($data, $userData->id, $chatId, $device);
         } catch (\Throwable $e) {
             return ResponseUtils::buildErrorResponse($e->getMessage(), 0, 404);
+        }
+        try {
+            $this->notificationService->sendNotification($userData->id, $chatId, NotificationService::MESSAGE, "New message from " . $userData->displayName);
+        } catch (\Throwable $e) {
+            Log::error('Error while sending push notifications to notification service ' . $e);
         }
         return response()->json(new SendMessageData($messageId, $device));
     }
@@ -221,6 +235,58 @@ class ChatController extends Controller
         }
         else {
             return ResponseUtils::buildErrorResponse('Call not found to set as in progress', 0, 404);
+        }
+    }
+
+    public function subscribeNotification(int $chatId, Request $request) {
+        $userData = $request->user();
+        try {
+            $this->validate($request, [
+                'type' => 'in:' . NotificationService::MESSAGE . ',' . NotificationService::PRESENCE,
+                'subscription' => 'required'
+            ]);
+        } catch (ValidationException $e) {
+            return ResponseUtils::buildErrorResponse($e->getMessage(), 0, 404);
+        }
+        try {
+            $this->notificationService->addUserNotification($userData->id, $chatId, $request->type, $request->subscription, Utils::detectDeviceType($request->userAgent()));
+        } catch (\Throwable $throwable) {
+            return ResponseUtils::buildErrorResponse('Unable to register notification. Possible that notification already added', 0, 401);
+        }
+        return ResponseUtils::buildEmptyOkResponse();
+    }
+
+    public function unsubscribeNotification(int $chatId, Request $request) {
+        $userData = $request->user();
+        try {
+            $this->validate($request, [
+                'type' => 'in:' . NotificationService::MESSAGE . ',' . NotificationService::PRESSENCE,
+                'subscription' => 'required'
+            ]);
+        } catch (ValidationException $e) {
+            return ResponseUtils::buildErrorResponse($e->getMessage(), 0, 404);
+        }
+        try {
+            $this->notificationService->removeUserNotification($userData->id, $chatId, $request->type, $request->subscription);
+        } catch (\Throwable $throwable) {
+            return ResponseUtils::buildErrorResponse('Unable to unregister notification', 0, 401);
+        }
+        return ResponseUtils::buildEmptyOkResponse();
+    }
+
+    public function getSubscriptionTypes(int $chatId, Request $request) {
+        $userData = $request->user();
+        try {
+            $this->validate($request, [
+                'subscription' => 'required'
+            ]);
+        } catch (ValidationException $e) {
+            return ResponseUtils::buildErrorResponse($e->getMessage(), 0, 404);
+        }
+        try {
+            return response()->json($this->notificationService->getUserNotificationTypes($userData->id, $chatId, $request->subscription));
+        } catch (\Throwable $throwable) {
+            return ResponseUtils::buildErrorResponse('Unable to get notification types', 0, 401);
         }
     }
 

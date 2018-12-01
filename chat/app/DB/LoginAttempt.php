@@ -13,7 +13,7 @@ use Illuminate\Database\Eloquent\Model;
 class LoginAttempt extends Model
 {
     protected $fillable = [
-        'login', 'success'
+        'login', 'success', 'device'
     ];
 
     protected $table = 'login_attempt';

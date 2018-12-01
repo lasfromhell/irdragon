@@ -42,8 +42,8 @@ export default class Presence extends React.Component {
     }
 
     render() {
-        return <div className="presence-items-block">
-            {Object.keys(this.state.items).map(key => <PresenceComponent key={key} item={this.state.items[key]}/>)}
+        return <div className={"presence-items-block " + this.props.chatApi.getCelebrationStyle()}>
+            {Object.keys(this.state.items).map(key => <PresenceComponent key={key} item={this.state.items[key]} chatApi={this.props.chatApi}/>)}
         </div>;
     }
 }

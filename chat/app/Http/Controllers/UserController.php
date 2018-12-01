@@ -58,7 +58,7 @@ class UserController extends Controller
         if (isset($user)) {
             $isOk = password_verify($data->password, $user->password);
         }
-        $this->userService->registerLoginAttempt($data->login, $isOk);
+        $this->userService->registerLoginAttempt($data->login, $isOk, Utils::detectDeviceType($request->userAgent()));
         if ($isOk) {
             try {
                 $token = $this->sessionService->generateToken();

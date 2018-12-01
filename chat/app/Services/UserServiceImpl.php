@@ -46,9 +46,9 @@ class UserServiceImpl implements UserService
         return UserChatACL::where('user_id', $userId)->get();
     }
 
-    public function registerLoginAttempt($login, $success) {
+    public function registerLoginAttempt($login, $success, $device) {
         $loginAttempt = new LoginAttempt();
-        $loginAttempt->fill(['login' => $login, 'success' => $success]);
+        $loginAttempt->fill(['login' => $login, 'success' => $success, 'device' => $device]);
         $loginAttempt->saveOrFail();
     }
 

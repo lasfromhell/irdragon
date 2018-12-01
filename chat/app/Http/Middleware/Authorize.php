@@ -3,11 +3,15 @@
 namespace App\Http\Middleware;
 
 use App\Contracts\CacheService;
+use App\Contracts\NotificationService;
 use App\Contracts\PresenceService;
 use App\Contracts\SessionService;
+use App\Contracts\UserService;
 use App\Services\ResponseUtils;
 use App\Services\Utils;
+use Carbon\Carbon;
 use Closure;
+use Illuminate\Support\Facades\Log;
 
 class Authorize
 {
@@ -15,11 +19,24 @@ class Authorize
     protected $presenceService;
     protected $cacheService;
 
-    public function __construct(SessionService $sessionService, PresenceService $presenceService, CacheService $cacheService)
+    const NOTIFICATION_PRESENCE_DIFF = 30;
+    /**
+     * @var NotificationService
+     */
+    private $notificationService;
+    /**
+     * @var UserService
+     */
+    private $userService;
+
+    public function __construct(SessionService $sessionService, PresenceService $presenceService, CacheService $cacheService,
+        NotificationService $notificationService, UserService $userService)
     {
         $this->sessionService = $sessionService;
         $this->presenceService = $presenceService;
         $this->cacheService = $cacheService;
+        $this->notificationService = $notificationService;
+        $this->userService = $userService;
     }
 
     /**
@@ -46,6 +63,16 @@ class Authorize
                 }
             });
             if ($userData) {
+                $item = $this->presenceService->getOnlineDate($userData->id);
+                try {
+                    if (!$item || (Carbon::now()->timestamp - $item->activityDate > self::NOTIFICATION_PRESENCE_DIFF)) {
+                        $this->userService->getUserChats($userData->id)->each(function($uc) use ($userData) {
+                            $this->notificationService->sendNotification($userData->id, $uc->chat_id, NotificationService::PRESENCE, 'User ' . $userData->displayName . ' online');
+                        });
+                    }
+                } catch (\Throwable $t) {
+                    Log::error("Unable to send presence online notification " . $t);
+                }
                 $this->presenceService->updateOnlineDate($userData->id, $userData->displayName, Utils::detectDeviceType($request->userAgent()));
                 $request->merge(['user' => $userData ]);
                 $request->setUserResolver(function () use ($userData) {

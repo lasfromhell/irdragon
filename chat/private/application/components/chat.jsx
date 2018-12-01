@@ -18,11 +18,16 @@ const TYPING_OFFSET_MS = 3000;
 const TYPING_REFRESH_SEND_OFFSET_MS = 3000;
 const DIALOG_SMILES = 'smiles';
 const DIALOG_CALL_TO = 'call_to';
+const DIALOG_NOTIFICATIONS = 'notifications';
 
 export default class Chat extends React.Component {
 
     constructor(props) {
         super(props);
+
+        this.celebrationEnabled = false;
+        this.badModeEnabled = true;
+
         this.log = props.log;
         this.state = {
             messages: new SortedMap(),
@@ -76,6 +81,20 @@ export default class Chat extends React.Component {
         this.startMessagesGathering();
         // this.startPresenceGathering();
         this.initializeCallService();
+
+        this.api = {
+            activateDialog: this.activateDialog.bind(this),
+            getActiveDialog: this.getActiveDialog.bind(this),
+            getChatId: this.getChatId.bind(this),
+            getLog: this.getLog.bind(this),
+            getCelebrationStyle: this.getCelebrationStyle.bind(this),
+            getChatProxy: this.getChatProxy.bind(this),
+            dialogs: {
+                smiles: DIALOG_SMILES,
+                callTo: DIALOG_CALL_TO,
+                notifications: DIALOG_NOTIFICATIONS
+            }
+        };
 
         window.addEventListener('focus', this.onWindowActive.bind(this));
         window.addEventListener('resize', this.onWindowResize.bind(this));
@@ -408,7 +427,9 @@ export default class Chat extends React.Component {
 
     componentDidMount() {
         this.scrollToBottom(this.refs.chatMessagesBox);
-        new Celebrate().startCelebrate();
+        if (this.celebrationEnabled) {
+            new Celebrate().startCelebrate();
+        }
     }
 
     componentDidUpdate() {
@@ -677,9 +698,7 @@ export default class Chat extends React.Component {
     }
 
     onSmilesClick() {
-        this.setState({
-            activeDialog: DIALOG_SMILES,
-        });
+        this.activateDialog(DIALOG_SMILES);
     }
 
     onSmileClick(data) {
@@ -715,9 +734,7 @@ export default class Chat extends React.Component {
                     this.presenceTargets.push(presenceItem.action.displayName);
                 }
             }
-            this.setState({
-                activeDialog: DIALOG_CALL_TO
-            })
+            this.activateDialog(DIALOG_CALL_TO);
         }
         else {
             this.callService.callAction();
@@ -761,6 +778,12 @@ export default class Chat extends React.Component {
         }), err => {
             this.log.error("Unable to get geoposition. " + err.message);
         })
+    }
+
+    activateDialog(dialogName) {
+        this.setState({
+            activeDialog: dialogName
+        });
     }
 
     // onInputChange(e) {
@@ -808,11 +831,31 @@ export default class Chat extends React.Component {
         return "";
     }
 
+    getActiveDialog() {
+        return this.state.activeDialog;
+    }
+
+    getChatId() {
+        return this.chatId;
+    }
+
+    getLog() {
+        return this.log;
+    }
+
+    getCelebrationStyle() {
+        return this.celebrationEnabled ? " celebrate-style " : (this.badModeEnabled ? " bad-mode-style " : "");
+    }
+
+    getChatProxy() {
+        return this.chatProxy;
+    }
+
     render() {
-        return <div className={"chat-box" + (this.state.serverError ? " chat-box-error" : "")} ref="chatBox">
+        return <div className={"chat-box" + (this.state.serverError ? " chat-box-error" : "") + this.getCelebrationStyle()} ref="chatBox">
             <div className={"screen-wrapper " + (this.state.activeDialog !== null ? "" : " hidden")} onClick={this.onScreenWrapper.bind(this)}/>
-            <ChatMenu onLogout={this.onLogout.bind(this)} chatProxy={this.chatProxy} headerMessage={this.state.headerMessage} observables={this.observables} control={this.control}/>
-            <div className="chat-messages-box" ref="chatMessagesBox" onScroll={this.handleMessageBoxScroll.bind(this)} onWheel={this.handleWheel.bind(this)}>
+            <ChatMenu onLogout={this.onLogout.bind(this)} headerMessage={this.state.headerMessage} observables={this.observables} control={this.control} chatApi={this.api}/>
+            <div className={"chat-messages-box " + this.getCelebrationStyle()} ref="chatMessagesBox" onScroll={this.handleMessageBoxScroll.bind(this)} onWheel={this.handleWheel.bind(this)}>
                 {this.state.messages.map((value, key) => <ChatMessage id={'cm_' + key} key={key} message={value} userData={this.props.userData} lastActiveDate={this.lastActiveDate}/>)}
                 {this.state.proposedMessages.map((value, key) => <ChatMessage id={'propcm_' + key} key={key} message={value} userData={this.props.userData} lastActiveDate={this.lastActiveDate}/>)}
                 {/*{<ChatMessage id='preview-message' message={this.refs.chatInput.value} userData={this.props.userData}/>}*/}
@@ -824,15 +867,15 @@ export default class Chat extends React.Component {
                     <audio ref="remotePlayer" autoPlay controls className="hidden"/>
                 }
             </div>
-            <div className="chat-panel">
+            <div className={"chat-panel " + this.getCelebrationStyle()}>
                 <div className="chat-typing-area" ref="typingArea"><span className="chat-typing-text" ref="typingText"/></div>
                 <div className="chat-panel-menu">
-                    <i className={"panel-awesome-default fas fa-map-marked"} onClick={this.onLocateClick.bind(this)}/>
+                    <i className={"panel-awesome-default fas fa-map-marked" + this.getCelebrationStyle()} onClick={this.onLocateClick.bind(this)}/>
                     <i className={"panel-awesome-default " +
                         (this.state.videoCall ? "fas fa-video" : "fas fa-phone") +
-                        this.getCallStateClass() + (this.state.activeDialog === DIALOG_CALL_TO ? " panel-awesome-selected" : "")} onClick={this.onCallButtonClick.bind(this)}/>
+                        this.getCallStateClass() + (this.state.activeDialog === DIALOG_CALL_TO ? " panel-awesome-selected" : "") + this.getCelebrationStyle()} onClick={this.onCallButtonClick.bind(this)}/>
                     <div className={(this.state.activeDialog === DIALOG_CALL_TO ? "call-box-wrapper" : "hidden")}>
-                        <div className="call-box">
+                        <div className={"call-box " + this.getCelebrationStyle()}>
                             <div className="row">
                                 <label htmlFor="rtcTarget">To:</label>
                                 <select ref="rtcTarget" id="rtcTarget">
@@ -850,18 +893,18 @@ export default class Chat extends React.Component {
                             </div>
                         </div>
                     </div>
-                    <i className={"panel-awesome-default fas fa-notes-medical"} onClick={this.onDownloadLogs.bind(this)}/>
+                    <i className={"panel-awesome-default fas fa-notes-medical " + this.getCelebrationStyle()} onClick={this.onDownloadLogs.bind(this)}/>
                     <label htmlFor="imageInput">
-                        <i className={"panel-awesome-default far fa-image"}/>
+                        <i className={"panel-awesome-default far fa-image " + this.getCelebrationStyle()}/>
                     </label>
                     <input type="file" accept="image/*" id="imageInput" ref="imageUploadInput" className="hidden" multiple onChange={this.onInputImageSelected.bind(this)}/>
                     <label htmlFor="fileInput">
-                        <i className={"panel-awesome-default far fa-file"}/>
+                        <i className={"panel-awesome-default far fa-file " + this.getCelebrationStyle()}/>
                     </label>
                     <input type="file" id="fileInput" ref="fileUploadInput" className="hidden" multiple onChange={this.onInputFileSelected.bind(this)}/>
-                    <i className={"panel-awesome-default far fa-smile " + (this.state.activeDialog === DIALOG_SMILES ? "panel-awesome-selected" : "")} onClick={this.onSmilesClick.bind(this)} />
+                    <i className={"panel-awesome-default far fa-smile " + (this.state.activeDialog === DIALOG_SMILES ? "panel-awesome-selected" : "") + this.getCelebrationStyle()} onClick={this.onSmilesClick.bind(this)} />
                     <div className={(this.state.activeDialog === DIALOG_SMILES ? "smiles-box-wrapper" : "hidden")}>
-                        <div className="smiles-box">
+                        <div className={"smiles-box " + this.getCelebrationStyle()}>
                             <ul>
                                 <li><img className="smile" src="images/smiles/01.gif" onClick={() => this.onSmileClick(":D")}/></li>
                                 <li><img className="smile" src="images/smiles/02.gif" onClick={() => this.onSmileClick(":o")}/></li>
@@ -884,11 +927,11 @@ export default class Chat extends React.Component {
                             </ul>
                         </div>
                     </div>
-                    <i className={"panel-awesome-default far fa-chevron-double-down"} onClick={this.onScrollChatToBottom.bind(this)} />
+                    <i className={"panel-awesome-default far fa-chevron-double-down" + this.getCelebrationStyle()} onClick={this.onScrollChatToBottom.bind(this)} />
                 </div>
             </div>
             {/*<div className="chat-input" ref="chatInput" onKeyPress={this.handleInputKeyPress.bind(this) } onMouseUp={this.onInputMouseUp.bind(this)} onDrop={this.onInputDrop.bind(this)} onPaste={this.onInputPaste.bind(this)} onInput={this.onInputChange.bind(this)}/>*/}
-            <textarea className="chat-input" ref="chatInput" onKeyPress={this.handleInputKeyPress.bind(this) } onDrop={this.onInputDrop.bind(this)} onPaste={this.onInputPaste.bind(this)}/>
+            <textarea className={"chat-input " + this.getCelebrationStyle()} ref="chatInput" onKeyPress={this.handleInputKeyPress.bind(this) } onDrop={this.onInputDrop.bind(this)} onPaste={this.onInputPaste.bind(this)}/>
         </div>;
     }
 };

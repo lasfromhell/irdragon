@@ -51,8 +51,8 @@ export default class PresenceComponent extends React.Component {
         let backActionClass, textActionClass;
         [backActionClass, textActionClass] = this.actionStatus();
         let deviceUISubClass = DeviceService.getDeviceUISubClass(this.device);
-        return <div className="presence-item">
-            <div className="presence-name">{this.item.online.displayName}</div>
+        return <div className={"presence-item" + this.props.chatApi.getCelebrationStyle()}>
+            <div className={"presence-name " + textActionClass}>{this.item.online.displayName}</div>
             <div className={"presence-status " + this.onlineStatus()}/>
             <div className={"presence-status " + backActionClass}/>
             <div className={"presence-date " + textActionClass}>{this.presenceDateString}</div>

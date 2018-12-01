@@ -26,6 +26,7 @@ $app = new Laravel\Lumen\Application(
  $app->withFacades();
 
  $app->withEloquent();
+ $app->configure('database');
 
     config([
         "filesystems" => [
@@ -88,6 +89,11 @@ $app->singleton(
 $app->singleton(
     \App\Contracts\RTCService::class,
     \App\Services\RTCServiceImpl::class
+);
+
+$app->singleton(
+    \App\Contracts\NotificationService::class,
+    \App\Services\NotificationServiceImpl::class
 );
 
 $app->singleton(

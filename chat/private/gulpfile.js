@@ -44,6 +44,23 @@ gulp.task('build-dev', function() {
 
 });
 
+gulp.task('notification-worker-dev', function() {
+    browserify({entries: 'workers/notification-worker/worker.js', debug: true})
+        .transform(babelify)
+        .bundle()
+        .on('error', function(err) {
+            console.error(err.stack);
+            this.emit('end');
+        })
+        .pipe(source('notification-worker.js'))
+        // .pipe(buffer())
+        // .pipe(sourcemaps.init({loadMaps: true}))
+        // .pipe(streamify(uglify()))
+        // .pipe(sourcemaps.write('./'))
+        .pipe(gulp.dest('../chat/js'))
+        .pipe(gutil.noop());
+});
+
 gulp.task('watch', function() {
     gulp.start('build');
     gulp.watch('application/**/*.jsx', ['build']);
@@ -51,7 +68,9 @@ gulp.task('watch', function() {
 
 gulp.task('watch-dev', function() {
     gulp.start('build-dev');
-    gulp.watch('application/**/*.jsx', ['build-dev']);
+    gulp.start('notification-worker-dev');
+    gulp.watch(['application/**/*.jsx'], ['build-dev']);
+    gulp.watch(['workers/**/*.js'], ['notification-worker-dev']);
 });
 
 gulp.task('default', ['watch-dev']);
